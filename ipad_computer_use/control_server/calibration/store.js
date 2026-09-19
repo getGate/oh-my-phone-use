@@ -3,6 +3,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const validID = value => typeof value === 'string' && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
+// One run may take this long: the lease and the worker share the limit. About 90 actions at
+// ~0.3 s each over USB, ~0.6 s each through a Wi-Fi + BLE input tool, plus recoveries.
+const budgetMs = Number(process.env.CALIBRATION_BUDGET_MS || 300000);
+// The worker checks a measured profile with the same rules the control server applies when loading it.
+const validProfile = p => !!p && p.source === 'native' && validID(p.deviceID) &&
+  p.validation?.targets === 6 && Number.isFinite(p.validation.maxError) && p.validation.maxError >= 0 && p.validation.maxError <= 3 &&
+  p.units === 'UIKit surface points' && Array.isArray(p.geometry) && p.geometry.length === 2 && p.geometry.every(n => Number.isFinite(n) && n > 0) &&
+  Array.isArray(p.curve) && p.curve.length >= 12 && p.curve.every((v, i) => Number.isFinite(v.input) && Number.isFinite(v.output) &&
+    v.input > 0 && v.output > 0 && (!i || (v.input > p.curve[i-1].input && v.output >= p.curve[i-1].output)));
 
 class CalibrationStore {
   constructor(directory = require('../config').stateDirectory) {
@@ -20,7 +29,7 @@ class CalibrationStore {
     fs.mkdirSync(this.directory, {recursive: true, mode: 0o700});
     if (this.lease()) throw Error('Calibration already running');
     try {fs.unlinkSync(this.leaseFile);} catch (e) {if (e.code !== 'ENOENT') throw e;}
-    const value = {deviceID, secret: crypto.randomBytes(24).toString('hex'), expiresAt: Date.now() + 150000};
+    const value = {deviceID, secret: crypto.randomBytes(24).toString('hex'), expiresAt: Date.now() + budgetMs};
     fs.writeFileSync(this.leaseFile, JSON.stringify(value), {flag: 'wx', mode: 0o600});
     return value;
   }
@@ -40,11 +49,7 @@ class CalibrationStore {
     for (const file of files.filter(f => f.startsWith('pointer-') && f.endsWith('.json'))) {
       try {
         const p = JSON.parse(fs.readFileSync(path.join(this.directory, file), 'utf8'));
-        if (p.source === 'native' && p.deviceID?.toLowerCase() === deviceID.toLowerCase() &&
-          p.validation?.targets === 6 && Number.isFinite(p.validation.maxError) && p.validation.maxError >= 0 && p.validation.maxError <= 3 &&
-          p.units === 'UIKit surface points' && Array.isArray(p.geometry) && p.geometry.length === 2 && p.geometry.every(n => Number.isFinite(n) && n > 0) &&
-          Array.isArray(p.curve) && p.curve.length >= 12 && p.curve.every((v, i) => Number.isFinite(v.input) && Number.isFinite(v.output) &&
-            v.input > 0 && v.output > 0 && (!i || (v.input > p.curve[i-1].input && v.output >= p.curve[i-1].output)))) return p;
+        if (validProfile(p) && p.deviceID.toLowerCase() === deviceID.toLowerCase()) return p;
       } catch {}
     }
     return null;
@@ -56,4 +61,4 @@ class CalibrationStore {
     return a.length === b.length && crypto.timingSafeEqual(a, b);
   }
 }
-module.exports = {CalibrationStore, validID};
+module.exports = {CalibrationStore, validID, validProfile, budgetMs};

@@ -4,7 +4,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const {spawn} = require('node:child_process');
 const {WebSocketServer, WebSocket} = require('ws');
-const {CalibrationStore} = require('./store');
+const {CalibrationStore, budgetMs} = require('./store');
 
 function createCalibration({launch = spawn, stopInput, calibration = new CalibrationStore()} = {}) {
   let client = null, sample = null, target = null, revision = 0;
@@ -41,7 +41,7 @@ function createCalibration({launch = spawn, stopInput, calibration = new Calibra
     const current = {child, ws, lease, timer: null, output: '', error: '', result: null};
     job = current;
     runState(ws, 'Finding pointer', true, {completed:0,total:19});
-    current.timer = setTimeout(() => {stopJob();runState(ws, 'Calibration timed out');}, 150000);
+    current.timer = setTimeout(() => {stopJob();runState(ws, 'Calibration timed out');}, budgetMs);
     child.stdout.on('data', chunk => {
       current.output = (current.output + chunk.toString()).slice(-16384);
       let split;

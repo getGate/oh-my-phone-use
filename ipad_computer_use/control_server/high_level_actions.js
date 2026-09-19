@@ -129,4 +129,4 @@ function compileHighLevelActions(body, profile) {
   return output;
 }
 
-module.exports = {compileHighLevelActions};
+module.exports = {compileHighLevelActions, moveBetween};
