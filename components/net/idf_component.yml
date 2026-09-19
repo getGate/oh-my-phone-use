@@ -1,0 +1,4 @@
+## Managed dependencies (downloaded by the ESP-IDF component manager on the first build)
+dependencies:
+  idf: ">=5.1"
+  espressif/mdns: "^1.4.0"

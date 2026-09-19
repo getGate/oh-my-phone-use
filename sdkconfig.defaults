@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# PhoneUse firmware defaults (classic ESP32 / ESP32-PICO-V3, ESP32-PICO-KIT-1)
+# ---------------------------------------------------------------------------
+CONFIG_IDF_TARGET="esp32"
+
+# Bluetooth: Bluedroid host. BLE is used for HID. The controller is built in
+# dual (BTDM) mode so Classic BT (HFP) can be enabled later without changing the
+# controller configuration; at runtime the Classic BT memory is released unless
+# CONFIG_PHONEUSE_BT_KEEP_CLASSIC is set (see components/bt_stack/Kconfig).
+CONFIG_BT_ENABLED=y
+CONFIG_BTDM_CTRL_MODE_BTDM=y
+CONFIG_BT_BLUEDROID_ENABLED=y
+CONFIG_BT_BLE_ENABLED=y
+CONFIG_BT_CLASSIC_ENABLED=n
+CONFIG_BT_GATTS_ENABLE=y
+CONFIG_BT_GATTC_ENABLE=n
+CONFIG_BT_BLE_SMP_ENABLE=y
+CONFIG_BT_BLE_42_FEATURES_SUPPORTED=y
+
+# Wi-Fi station + HTTP server for the iPad Computer Use input-tool protocol
+# (components/input_tool, components/net). Wi-Fi and Bluetooth share the radio:
+# software coexistence must stay enabled.
+CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
+CONFIG_LWIP_LOCAL_HOSTNAME="phoneuse"
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
+
+# Bluedroid + Wi-Fi do not fit the ESP32's IRAM with the default -Og build: optimise for
+# size and keep the Wi-Fi/FreeRTOS hot paths in flash (a few microseconds of latency, not
+# noticeable for HID input over HTTP).
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+CONFIG_ESP_WIFI_IRAM_OPT=n
+CONFIG_ESP_WIFI_RX_IRAM_OPT=n
+CONFIG_FREERTOS_PLACE_FUNCTIONS_INTO_FLASH=y
+CONFIG_RINGBUF_PLACE_FUNCTIONS_INTO_FLASH=y
+
+# Heap headroom on a chip without PSRAM: the input tool moves a few kilobytes per
+# request, so the Wi-Fi driver does not need its default throughput-oriented buffers.
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=8
+CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=16
+CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER_NUM=16
+
+# ESP32-PICO-V3 has 4 MB of embedded flash. Bluedroid + Wi-Fi + lwIP + HTTP server
+# exceed the 1.5 MB "single app, large" layout, so use partitions.csv (3 MB app).
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# 1 ms tick so short inter-report delays (CONFIG_PHONEUSE_HID_REPORT_INTERVAL_MS) are honoured.
+CONFIG_FREERTOS_HZ=1000
+
+# Serial protocol runs on the console UART (UART0 / CP2102N). Keep log output plain
+# so the host can distinguish protocol responses from log lines.
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+CONFIG_ESP_CONSOLE_UART_BAUDRATE=115200
+CONFIG_LOG_COLORS=n

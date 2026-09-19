@@ -1,0 +1,19 @@
+# ESP-IDF build output and generated configuration (sdkconfig.defaults is the source of truth)
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+test/host/build/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Local copy of the upstream git metadata of ipad_computer_use/ (see README, "Repository layout")
+.upstream/
+# Xcode build output that upstream committed by accident; not source
+ipad_computer_use/ipad_app/build_iphone/

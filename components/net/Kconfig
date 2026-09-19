@@ -1,0 +1,37 @@
+menu "PhoneUse: Wi-Fi"
+
+    config PHONEUSE_WIFI_SSID
+        string "Default Wi-Fi SSID (empty: provision over serial)"
+        default ""
+        help
+            Used only when no credentials are stored in NVS. Credentials set with the
+            WIFI <ssid> <password> serial command take precedence and survive reflashing.
+
+    config PHONEUSE_WIFI_PASSWORD
+        string "Default Wi-Fi password"
+        default ""
+
+    config PHONEUSE_WIFI_HOSTNAME
+        string "Hostname (DHCP and mDNS: <hostname>.local)"
+        default "phoneuse"
+
+    config PHONEUSE_WIFI_MDNS
+        bool "Advertise the input tool with mDNS/Bonjour"
+        default y
+        help
+            Lets the iPad app use http://<hostname>.local instead of an IP address.
+
+    config PHONEUSE_WIFI_POWER_SAVE
+        bool "Keep Wi-Fi modem sleep enabled (recommended with Bluetooth coexistence)"
+        default y
+        help
+            Modem sleep (WIFI_PS_MIN_MODEM) is what the ESP32 software coexistence
+            expects; disabling it (WIFI_PS_NONE) can lower HTTP latency slightly but
+            takes airtime away from the Bluetooth LE HID link.
+
+    config PHONEUSE_WIFI_MAX_RETRY_DELAY_S
+        int "Longest delay between reconnection attempts (s)"
+        range 1 300
+        default 30
+
+endmenu

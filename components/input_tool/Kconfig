@@ -1,0 +1,66 @@
+menu "PhoneUse: input tool (iPad Computer Use over Wi-Fi)"
+
+    config PHONEUSE_INPUT_TOOL_ENABLE
+        bool "Enable the Wi-Fi HTTP input-tool protocol"
+        default y
+        help
+            Runs a Wi-Fi station and an HTTP server that speak the iPad Computer Use
+            input-device protocol (GET /status, POST /input, POST /stop) and play the
+            received records back over Bluetooth LE HID. Disable to build the serial-only
+            BLE HID firmware (no Wi-Fi, smaller binary, more free RAM).
+
+    if PHONEUSE_INPUT_TOOL_ENABLE
+
+        config PHONEUSE_INPUT_TOOL_HTTP_PORT
+            int "HTTP port"
+            range 1 65535
+            default 80
+
+        config PHONEUSE_INPUT_TOOL_SECRET
+            string "Build-time input-device secret (empty: provision over serial)"
+            default ""
+            help
+                Value of the X-Input-Device-Secret header that POST /input and POST /stop
+                must carry. The iPad Computer Use control server generates it in
+                control_server/.state/input_device_secret. A secret stored with the
+                SECRET serial command (kept in NVS) takes precedence over this value.
+
+        config PHONEUSE_INPUT_TOOL_RECORD_GAP_MS
+            int "Spacing between consecutive records (ms)"
+            range 0 200
+            default 15
+            help
+                The XIAO RP2040 reference firmware waits 15 ms after every record. The
+                HID report interval (PHONEUSE_HID_REPORT_INTERVAL_MS) counts towards this
+                value; only the remainder is added as an extra delay.
+
+        config PHONEUSE_INPUT_TOOL_KEY_HOLD_MS
+            int "How long a key record holds its key (ms)"
+            range 1 200
+            default 15
+
+        config PHONEUSE_INPUT_TOOL_DEADLINE_S
+            int "Batch deadline (s)"
+            range 1 600
+            default 70
+            help
+                A batch still running after this long is stopped and every key/button
+                released, like the reference firmware's 70-second deadline.
+
+        config PHONEUSE_INPUT_TOOL_BOOT_BUTTON
+            bool "BOOT button sends a left click"
+            default y
+            help
+                iOS asks you to press a button on the pointing device when assigning
+                AssistiveTouch actions to it. Pressing BOOT while the tool is idle sends
+                one left click, like the BOOT button of the XIAO reference firmware.
+
+        config PHONEUSE_INPUT_TOOL_BOOT_BUTTON_GPIO
+            int "BOOT button GPIO"
+            depends on PHONEUSE_INPUT_TOOL_BOOT_BUTTON
+            range 0 39
+            default 0
+
+    endif
+
+endmenu
