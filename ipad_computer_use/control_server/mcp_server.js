@@ -196,7 +196,7 @@ const actionVariants = [
     additionalProperties: false,
     properties: {
       type: {const: 'scroll'},
-      dy: {type: 'integer', minimum: -127, maximum: 127, description: 'Signed USB wheel units, not pixels. On the tested iPad, positive scrolls down and negative scrolls up; device settings can reverse this. Move the pointer over the intended scrollable pane first. Small amounts may barely move. Try 80, wait 500 ms, then get_screen; if unchanged, check the pane, boundary and opposite sign instead of repeating blindly.'}
+      dy: {type: 'integer', minimum: -127, maximum: 127, description: 'Signed HID wheel units, not pixels. On the tested iPad, positive scrolls down and negative scrolls up; device settings can reverse this. Move the pointer over the intended scrollable pane first. Small amounts may barely move. Try 80, wait 500 ms, then get_screen; if unchanged, check the pane, boundary and opposite sign instead of repeating blindly.'}
     },
     required: ['type', 'dy']
   }

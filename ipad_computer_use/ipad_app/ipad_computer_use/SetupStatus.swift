@@ -15,7 +15,7 @@ private struct DeviceSetupStatus: Decodable {
 final class SetupStatus {
     var inputReady: Bool?
     var inputCompatible = false
-    var inputDetail = "Checking USB connection"
+    var inputDetail = "Checking input tool"
     var serverConnected = false
     var serverDetail = "Not connected"
     var calibrated: Bool?
@@ -38,8 +38,30 @@ final class SetupStatus {
         nextCheck = nil
     }
     private var generation = 0
-    private let dongle = DongleClient()
+    private var dongle = DongleClient()
+    private var inputToolAddress = ""
     private let session: URLSession
+
+    /// Points the input-tool check at a saved address (empty = the USB XIAO default).
+    func useInputTool(address: String) {
+        let normalized = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized != inputToolAddress else { return }
+        inputToolAddress = normalized
+        dongle = DongleClient.configured(normalized)
+        generation += 1
+        inputReady = nil; inputCompatible = false; inputDetail = "Checking input tool"
+        checkingInput = false
+    }
+
+    /// Readiness text for a status response from either firmware.
+    nonisolated static func describe(_ status: DongleStatus) -> String {
+        if status.running { return "Input tool is sending input" }
+        let name = status.device ?? "Input tool"
+        let label = status.transport == nil && name.localizedCaseInsensitiveContains("XIAO")
+            ? "XIAO RP2040 · USB" : "\(name) · \(status.transport ?? "USB")"
+        if status.hidReady { return label }
+        return status.hint ?? "Input tool found; HID input not ready"
+    }
 
     init(session: URLSession? = nil) {
         let configuration = URLSessionConfiguration.ephemeral
@@ -55,7 +77,7 @@ final class SetupStatus {
 
     func reset() {
         generation += 1
-        inputReady = nil; inputDetail = "Checking USB connection"
+        inputReady = nil; inputDetail = "Checking input tool"
         inputCompatible = false
         serverConnected = false; serverDetail = "Checking connection"
         calibrated = nil; calibrating = false; screenBroadcast = false
@@ -87,21 +109,24 @@ final class SetupStatus {
                 // Older working firmware uses different display names. Decoding
                 // the required status fields checks the status protocol, not branding.
                 inputCompatible = true
-                inputDetail = status.hidReady ? (status.running ? "Input tool is sending input" : "XIAO RP2040 · USB") : "Input tool found; USB input not ready"
+                inputDetail = Self.describe(status)
             } catch {
                 guard !Task.isCancelled, generation == current else { return }
                 inputReady = false
                 inputCompatible = false
+                let host = dongle.host
                 if let error = error as? URLError {
                     switch error.code {
                     case .timedOut:
-                        inputDetail = "Timed out reaching 172.31.254.1"
+                        inputDetail = "Timed out reaching \(host)"
                     case .notConnectedToInternet, .networkConnectionLost:
-                        inputDetail = "No route to 172.31.254.1"
+                        inputDetail = "No route to \(host)"
                     case .cannotConnectToHost:
-                        inputDetail = "Cannot connect to 172.31.254.1"
+                        inputDetail = "Cannot connect to \(host)"
+                    case .cannotFindHost, .dnsLookupFailed:
+                        inputDetail = "Cannot resolve \(host)"
                     default:
-                        inputDetail = "USB check failed: \(error.code.rawValue)"
+                        inputDetail = "Input tool check failed: \(error.code.rawValue)"
                     }
                 } else {
                     inputDetail = error.localizedDescription

@@ -2,8 +2,10 @@
 
 The native client for the control server. It owns user consent, ReplayKit screen
 capture, session lifecycle, the native calibration surface, and the optional
-session Live Activity. It forwards encoded input to the attached input tool over
-USB networking. It does not contain an agent or run the control server.
+session Live Activity. It forwards encoded input to the input tool over HTTP:
+the USB-attached XIAO RP2040 (`http://172.31.254.1`, the default) or an
+ESP32-PICO-KIT on the local Wi-Fi network (address entered in the app). It does
+not contain an agent or run the control server.
 
 ## Layout
 
@@ -53,16 +55,23 @@ run these commands. Build output is in this component's ignored `build/` folder.
 ## Session flow
 
 First launch presents three required setup steps: attach the input tool, enter
-and verify the control server URL, then run pointer calibration. The input check
-requires a valid status response (`running`, `state`, and `hidReady`) and HID
-readiness, regardless of the firmware's display name. Firmware does not advertise
+and verify the control server URL, then run pointer calibration. The first step
+also takes the input tool address: leave it empty for the USB XIAO, or enter
+`http://phoneuse.local` / `http://<ip>` for an ESP32-PICO-KIT (pair it in
+Settings > Bluetooth first). The address is saved with the server address in the
+shared keychain item so the broadcast extension uses the same tool, and can be
+changed later under **Edit Input Tool** on the main page (ending any active
+session). The input check requires a valid status response (`running`, `state`,
+and `hidReady`) and HID readiness, regardless of the firmware's display name;
+the optional `transport` and `hint` fields of the ESP32 firmware are shown in
+the readiness row. Firmware does not advertise
 a version, so this is not an exact version or full command-compatibility check.
 Calibration starts after Apple's screen-sharing confirmation. Setup completion
 is saved only after calibration succeeds; closing or stopping it allows retry.
 Existing installations without a saved setup-completion flag also see this flow,
 with their existing server address prefilled.
 
-1. Attach the XIAO input tool and keep the iPad's internet/Wi-Fi connection.
+1. Attach the XIAO input tool (or bring the paired ESP32 onto the same Wi-Fi network) and keep the iPad's internet/Wi-Fi connection.
 2. Edit the control server address directly under its status row on the main page.
 3. Tap Start Session, then confirm Start Broadcast in Apple's prompt.
 4. Complete pointer calibration if needed. Use any iPad app during the session.
@@ -79,7 +88,9 @@ the foreground app; the transport does not know which field/button receives it.
 
 Native calibration connects to port 8766 in local ws development, or `/native`
 on the same wss origin in a TLS deployment. Retain the /device path in the saved
-server address. The input tool remains reachable at http://172.31.254.1.
+server address. The USB input tool remains reachable at http://172.31.254.1; a
+Wi-Fi tool uses the saved input tool address. `NSBonjourServices` lists
+`_http._tcp` and `_phoneuse._tcp` so `.local` names resolve on the local network.
 
 ## Live Activity
 

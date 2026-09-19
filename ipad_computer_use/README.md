@@ -1,11 +1,18 @@
 # iPad Computer Use
 
-Control an iPad through a tiny USB input tool. A native iPad app shares its screen
-and forwards keyboard and mouse commands to a Seeed Studio XIAO RP2040, which
-plays them back as real USB HID input.
+Control an iPad through a tiny input tool. A native iPad app shares its screen
+and forwards keyboard and mouse commands to the tool, which plays them back as
+real HID input. Two tools are supported:
 
-USB-C iPhones are also supported; see [iPhone setup](#iphone-setup) for the
-additional AssistiveTouch configuration.
+- **Seeed Studio XIAO RP2040** (upstream design): USB HID + USB networking; the
+  app reaches it at `http://172.31.254.1` over the USB cable.
+- **Espressif ESP32-PICO-KIT** (this fork): Bluetooth LE HID + Wi-Fi; the app
+  reaches it at `http://phoneuse.local` (or its IP address) on the local network.
+  No USB connection to the iPad/iPhone is needed, so it also works with Lightning
+  iPhones. See [ESP32-PICO-KIT input tool](#esp32-pico-kit-input-tool).
+
+USB-C iPhones are also supported with the XIAO; see [iPhone setup](#iphone-setup)
+for the additional AssistiveTouch configuration.
 
 ![iPad Computer Use demo](docs/demo.gif)
 
@@ -17,18 +24,18 @@ Your client / agent
        v
 control_server/  <------ WebSocket ------>  ipad_app/
                                               |
-                                         HTTP over USB
+                                  HTTP over USB (XIAO) or Wi-Fi (ESP32)
                                               v
                                          input_device/
                                               |
-                                         USB HID input
+                              USB HID (XIAO) or Bluetooth LE HID (ESP32)
                                               v
                                             iPadOS
 ```
 
 | Component | Owns | Does not own |
 | --- | --- | --- |
-| [Input device](input_device/README.md) | RP2040 firmware, HTTP input protocol, HID reports, input codec | Screenshots, sessions, agents |
+| [Input device](input_device/README.md) | RP2040 firmware, ESP32 firmware integration, HTTP input protocol, HID reports, input codec | Screenshots, sessions, agents |
 | [Control server](control_server/README.md) | Session permits, action routing, screenshot requests, calibration profiles | Apple APIs or physical USB access |
 | [iPad app](ipad_app/README.md) | User-started sessions, ReplayKit capture, Live Activity, forwarding input to the tool | Agent decisions or firmware builds |
 
@@ -53,6 +60,9 @@ callers should use the high-level schema.
 ## Quickstart
 
 You need a **Seeed Studio XIAO RP2040**, a USB data cable, and an iPad or USB-C iPhone.
+For an **ESP32-PICO-KIT** instead of the XIAO, do steps 1, 3 and 4 below, then follow
+[ESP32-PICO-KIT input tool](#esp32-pico-kit-input-tool) for the firmware, pairing and
+the input-tool address.
 Physical testing has used an M-series iPad and an iPhone 17 Pro. Development needs Node.js 20+
 and npm; firmware builds need Arduino CLI. Building/installing the iPad app
 requires macOS, full Xcode with command-line tools, and Apple signing credentials.
@@ -154,6 +164,88 @@ adapter has no MCP-layer auth. Run the control server on a trusted host or
 behind a private transport such as Tailscale or OpenAI Secure MCP Tunnel. There
 is intentionally no app-layer pairing password.
 
+## ESP32-PICO-KIT input tool
+
+The ESP32-PICO-KIT (ESP32-PICO-V3/D4, classic ESP32) has no native USB, so the
+tool cannot enumerate as a USB device. Instead the ESP32 is a **Bluetooth LE
+mouse + keyboard** for the iPad/iPhone and exposes the same HTTP input protocol
+as the XIAO **over Wi-Fi**. The iPad app talks to it exactly like it talks to
+the XIAO, only the address changes.
+
+```text
+control_server  <-- WebSocket -->  ipad_app  -- HTTP over Wi-Fi -->  ESP32-PICO-KIT
+                                                                          |
+                                                                     Bluetooth LE HID
+                                                                          v
+                                                                    iPadOS / iOS
+```
+
+The firmware lives in the [PhoneUse](../README.md) repository that vendors this
+fork (`../` from here); the `input_device/scripts/esp32_*.sh` wrappers find it
+through `PHONEUSE_FIRMWARE_DIR` (default: the parent checkout). It needs ESP-IDF
+v5.1+ (built and tested with v6.1); see the firmware README for the toolchain.
+
+1. **Build and flash** (the board shows up as `/dev/cu.usbserial-XXXX` on macOS):
+
+   ```sh
+   bash input_device/scripts/esp32_build.sh
+   bash input_device/scripts/esp32_flash.sh /dev/cu.usbserial-XXXX
+   ```
+
+2. **Start the control server** (step 3 of the quickstart) so the input-device
+   secret exists in `control_server/.state/input_device_secret`, then **provision**
+   the secret and the Wi-Fi credentials over the board's serial port. The board
+   must join the same Wi-Fi network as the iPad/iPhone:
+
+   ```sh
+   bash input_device/scripts/esp32_provision.sh /dev/cu.usbserial-XXXX "Your Wi-Fi" "password"
+   ```
+
+   Both values are stored in the ESP32's flash (NVS) and survive reflashing. The
+   script prints the board's IP address and mDNS name (`phoneuse.local`).
+
+3. **Pair over Bluetooth**: on the iPad/iPhone open **Settings > Bluetooth** and
+   tap **PhoneUse HID** under *Other Devices*. The bond is stored on the ESP32, so
+   it reconnects automatically after a reset.
+
+4. **AssistiveTouch** (iPhone only): follow [iPhone setup](#iphone-setup), but
+   select **PhoneUse HID** under *Devices* and press the ESP32's **BOOT** button
+   when iOS asks for a button press (it sends a left click while the tool is
+   idle). Assign **Button 1** to **Single-Tap**.
+
+   An iPad does not need it: iPadOS drives a Bluetooth mouse with its own
+   pointer, so leave AssistiveTouch **off** there. With it on, clicks reach apps
+   as finger taps, and on the iPad tested the move that followed a click was
+   not reported as a pointer position. Calibration works around that (it nudges
+   the pointer after each click, see
+   [calibration](control_server/calibration/README.md)), but it is slower and
+   one more thing between the mouse button and the app.
+
+5. **Install the app** (step 4 of the quickstart), open it, and enter the input
+   tool address in the first setup step (or later under **Edit Input Tool** on
+   the main page): `http://phoneuse.local`, or `http://<IP address>` if `.local`
+   names do not resolve on your network. The **Input Tool** row shows
+   *PhoneUse ESP32 · Wi-Fi + BLE* once the board is reachable **and** connected
+   to the device over Bluetooth; until then it shows what is missing (pair, set
+   the secret).
+
+6. Continue with the control server URL and pointer calibration as usual.
+
+Differences from the XIAO to be aware of:
+
+- `hidReady` means "a phone is connected over Bluetooth LE", and `POST /input`
+  answers 409 while no phone is connected. Everything else in the
+  [protocol](input_device/PROTOCOL.md) is unchanged.
+- The HTTP server never blocks while a key is held: `POST /stop` takes effect
+  within a few milliseconds and a batch is stopped by the 70-second deadline or
+  by a lost Bluetooth link, releasing every key and button.
+- Wi-Fi and Bluetooth LE share one radio. Expect slightly more latency per
+  report than over USB; the record spacing (15 ms) matches the XIAO firmware.
+- Plaintext HTTP on your Wi-Fi network instead of a private USB link: keep the
+  network trusted, see [SECURITY.md](SECURITY.md).
+- Serial diagnostics use the firmware's own console (`python3 tools/control.py
+  status`, `wifi`, `secret` in the firmware repository), not `read_diagnostics.py`.
+
 ## iPhone setup
 
 Use the same firmware, control server, and app as for iPad. Before running the
@@ -189,6 +281,7 @@ Security > Local Network**.
 ```sh
 npm test
 bash input_device/scripts/test.sh
+bash input_device/scripts/esp32_check.sh http://phoneuse.local   # ESP32 tool, phone paired
 bash ipad_app/scripts/test_relay.sh
 bash ipad_app/scripts/test_frames.sh
 bash ipad_app/scripts/test_setup.sh

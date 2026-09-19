@@ -35,7 +35,7 @@ final class SampleHandler: RPBroadcastSampleHandler {
                 let configuration = try SharedConfiguration.load()
                 guard let id = configuration.sessionID else { throw RelayError(message: "Start a session in iPad Computer Use first") }
                 sessionID = id
-                let connection = RelayConnection()
+                let connection = RelayConnection(dongle: DongleClient.configured(configuration.inputToolAddress))
                 connection.screenshotProvider = { [capture] in try await capture.request() }
                 connection.onDisconnect = { [weak self] error in
                     guard let self, self.isCurrent(current) else { return }

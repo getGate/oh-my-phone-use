@@ -17,6 +17,12 @@ This is developer tooling, not a hardened public remote-control service.
   control server stores the same secret and sends it to the iPad app only after
   accepting a session. USB HTTP is still plaintext on the local USB network, so
   do not treat this as a high-assurance hardware security module.
+- The ESP32-PICO-KIT tool speaks the same protocol over plaintext HTTP on your
+  Wi-Fi network, with the secret stored in its flash (NVS) and sent by the app
+  in every mutating request. Anyone on that network who learns the secret can
+  inject keyboard and mouse input into the paired device: use a trusted network,
+  and reprovision (`esp32_provision.sh`) if the secret leaks. The Bluetooth LE
+  pairing is "Just Works" (no code), like most Bluetooth mice.
 - Session authorization is in server memory and expires on restart. Pending
   permits expire after two minutes; active sessions end on disconnect. No
   disconnected or uncertain command is automatically retried.

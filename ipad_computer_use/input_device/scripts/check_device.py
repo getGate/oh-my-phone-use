@@ -1,4 +1,9 @@
-"""Check the attached dongle's HTTP validation and cancellation without typing."""
+"""Check the input tool's HTTP validation and cancellation without typing.
+
+Targets the USB XIAO by default; set INPUT_DEVICE_URL (for example http://phoneuse.local or
+http://192.168.1.50) for an ESP32-PICO-KIT reached over Wi-Fi. The ESP32 firmware reports
+hidReady only while the phone is connected over Bluetooth, so pair it first.
+"""
 import json
 import os
 import pathlib
@@ -6,7 +11,7 @@ import time
 import urllib.error
 import urllib.request
 
-ROOT = "http://172.31.254.1"
+ROOT = os.environ.get("INPUT_DEVICE_URL", "http://172.31.254.1").rstrip("/")
 SECRET = os.environ.get("INPUT_DEVICE_SECRET")
 if not SECRET:
     SECRET = (pathlib.Path(__file__).resolve().parents[2] / "control_server" / ".state" / "input_device_secret").read_text().strip()

@@ -117,7 +117,7 @@ There is no OAuth or bearer token in this mode; the private network is the
 security boundary.
 
 The MCP adapter calls the loopback controller API directly. It does not access
-RP2040 hardware or iOS APIs directly. Absolute-looking
+the input tool hardware (RP2040 or ESP32) or iOS APIs directly. Absolute-looking
 actions such as `move_to` and coordinate `click` are available through
 `issue_actions`, but they need a known pointer origin. Calibration maps relative
 HID counts to screen movement; it does not let the server observe the current

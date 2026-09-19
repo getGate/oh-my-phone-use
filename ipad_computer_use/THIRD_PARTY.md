@@ -24,6 +24,10 @@ under that license. Third-party code retains its own licenses and notices.
   distribution's notices and source/relinking requirements before publishing
   prebuilt firmware, not just this project's original-code license.
 - Apple SDKs/tooling are installed separately and not redistributed here.
+- ESP32-PICO-KIT support builds the separate PhoneUse firmware with Espressif's
+  ESP-IDF (Apache-2.0) and the `espressif/mdns` component (Apache-2.0), fetched
+  by the ESP-IDF component manager at build time. Neither is included in this
+  source tree.
 
 This list describes the current source dependencies, not a completed audit of
 every library linked into a firmware binary.

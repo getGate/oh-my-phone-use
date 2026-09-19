@@ -35,13 +35,43 @@ struct DongleStatus: Decodable {
     let running: Bool
     let state: String
     let hidReady: Bool
+    /// "Wi-Fi + BLE" on the ESP32-PICO-KIT firmware; absent on the USB XIAO RP2040 firmware.
+    let transport: String?
+    /// Firmware guidance while the tool cannot accept input (pair over Bluetooth, set the secret).
+    let hint: String?
+    let secretConfigured: Bool?
 }
 
 actor DongleClient {
-    private let baseURL: URL
+    /// USB NCM address of the XIAO RP2040 input tool. Wi-Fi tools (ESP32) use a saved address.
+    static let defaultAddress = "http://172.31.254.1"
+    static let defaultBaseURL = URL(string: defaultAddress)!
+
+    nonisolated let baseURL: URL
     private let session: URLSession
 
-    init(baseURL: URL = URL(string: "http://172.31.254.1")!) {
+    /// Parses a saved input-tool address: empty means the USB default, otherwise http(s)://host[:port].
+    static func baseURL(from address: String?) throws -> URL {
+        let trimmed = (address ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return defaultBaseURL }
+        guard let components = URLComponents(string: trimmed), let scheme = components.scheme?.lowercased(),
+              ["http", "https"].contains(scheme), let host = components.host, !host.isEmpty,
+              components.user == nil, components.password == nil, components.query == nil,
+              components.fragment == nil, components.path.isEmpty || components.path == "/",
+              let url = components.url else {
+            throw RelayError(message: "Enter the input tool address as http://host or http://host:port")
+        }
+        return url
+    }
+
+    /// A client for the saved address; an unusable value falls back to the USB default.
+    static func configured(_ address: String?) -> DongleClient {
+        DongleClient(baseURL: (try? baseURL(from: address)) ?? defaultBaseURL)
+    }
+
+    nonisolated var host: String { baseURL.host(percentEncoded: false) ?? baseURL.absoluteString }
+
+    init(baseURL: URL = DongleClient.defaultBaseURL) {
         self.baseURL = baseURL
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 3
@@ -60,7 +90,7 @@ actor DongleClient {
         }
         let (data, response) = try await session.data(for: request)
         guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
-            throw RelayError(message: "XIAO rejected the request: \(String(data: data, encoding: .utf8) ?? "unknown error")")
+            throw RelayError(message: "Input tool rejected the request: \(String(data: data, encoding: .utf8) ?? "unknown error")")
         }
         return data
     }

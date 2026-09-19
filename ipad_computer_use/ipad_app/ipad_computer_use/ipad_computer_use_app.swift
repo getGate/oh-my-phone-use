@@ -13,13 +13,16 @@ import ReplayKit
 
 struct RelayView: View {
     @AppStorage("relayAddress") private var address = ""
+    @AppStorage("inputToolAddress") private var inputTool = ""
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
     @State private var onboardingStep = 0
     @State private var draftServer = ""
+    @State private var draftInputTool = ""
     @State private var calibrationRequested = false
     @State private var setup = SetupStatus()
     @State private var currentID: String? = try? SharedConfiguration.load().sessionID
     @State private var editingServer = false
+    @State private var editingInputTool = false
     @State private var broadcastLauncher = BroadcastLauncher()
     @State private var showNativePicker = false
     @State private var calibrating = false
@@ -59,6 +62,9 @@ struct RelayView: View {
                     }.padding(.top, 24)
                     VStack(spacing: 0) {
                         readiness("Input Tool", icon: "cable.connector", value: setup.inputReady == nil ? "Not checked" : setup.inputDetail, ready: setup.inputReady == true, checking: setup.checkingInput)
+                        DisclosureGroup("Edit Input Tool", isExpanded: $editingInputTool) {
+                            inputToolEditor
+                        }.padding(.bottom, 18)
                         Divider()
                         readiness("Control Server", icon: "network", value: setup.serverReachable ? (active ? "Connected" : "Available") : (setup.hasCheckedServer ? setup.serverDetail : "Not checked"), ready: setup.serverReachable, checking: setup.checkingServer)
                         DisclosureGroup("Edit Control Server", isExpanded: $editingServer) {
@@ -144,9 +150,10 @@ struct RelayView: View {
                     refreshID += 1
                 })
             }
-            .onAppear { draftServer = address }
-            .task(id: "\(address)|\(phase == .active)|\(refreshID)|\(launchRequest.revision)") {
+            .onAppear { draftServer = address; draftInputTool = inputTool }
+            .task(id: "\(address)|\(inputTool)|\(phase == .active)|\(refreshID)|\(launchRequest.revision)") {
                 guard phase == .active else { return }
+                setup.useInputTool(address: inputTool)
                 if let error = SharedConfiguration.takeBroadcastError() { message = error }
                 setup.retryNow()
                 var background = false
@@ -173,7 +180,7 @@ struct RelayView: View {
                         if setup.sessionState == "stop-unconfirmed" { message = "Session disconnected. Input stop was not confirmed; unplug the input tool if needed." }
                         await SessionActivity.end(id, status: setup.sessionState == "stop-unconfirmed" ? "Input stop unconfirmed" : "Session ended")
                         currentID = nil; ending = false; showNativePicker = false
-                        try? SharedConfiguration(address: address).save()
+                        try? SharedConfiguration(address: address, inputToolAddress: inputTool).save()
                     }
                     if !working, launchRequest.consume() {
                         await startFromControlCenter()
@@ -193,11 +200,13 @@ struct RelayView: View {
             Text(["Connect your input tool", "Connect your control server", "Calibrate your pointer"][onboardingStep])
                 .font(.title2.bold())
             if onboardingStep == 0 {
-                Text("Plug the XIAO into your iPad's USB-C port.")
+                Text("Plug a XIAO RP2040 into the USB-C port, or use an ESP32-PICO-KIT: pair it in Settings > Bluetooth, put it on this device's Wi-Fi network, and enter its address below.")
+                    .fixedSize(horizontal: false, vertical: true)
+                inputToolEditor
                 readiness("Input Tool", icon: "cable.connector", value: setup.inputDetail,
                           ready: setup.inputReady == true, checking: setup.checkingInput)
                 if setup.inputReady == true {
-                    Label(setup.inputCompatible ? "Input tool responding; USB input ready" : "Input tool status could not be verified. Reconnect and try again.",
+                    Label(setup.inputCompatible ? "Input tool responding; HID input ready" : "Input tool status could not be verified. Reconnect and try again.",
                           systemImage: setup.inputCompatible ? "checkmark.shield" : "exclamationmark.triangle")
                         .foregroundStyle(setup.inputCompatible ? Color.green : Color.orange)
                 }
@@ -249,6 +258,41 @@ struct RelayView: View {
         }.padding(.top, 24)
     }
 
+    private var inputToolEditor: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Leave empty for the USB XIAO RP2040 (\(DongleClient.defaultAddress)). For an ESP32-PICO-KIT on Wi-Fi, enter its address, for example http://phoneuse.local or http://192.168.1.50.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            TextField(DongleClient.defaultAddress, text: $draftInputTool)
+                .textFieldStyle(.roundedBorder).keyboardType(.URL)
+                .textInputAutocapitalization(.never).autocorrectionDisabled()
+                .accessibilityLabel("Input tool URL")
+            Button(currentID == nil ? "Save Input Tool" : "End Session and Save") { Task { await saveInputTool() } }
+                .buttonStyle(.bordered)
+                .disabled(working || draftInputTool.trimmingCharacters(in: .whitespacesAndNewlines) == inputTool)
+        }.padding(.vertical, 12)
+    }
+
+    private func saveInputTool() async {
+        message = nil
+        let candidate = draftInputTool.trimmingCharacters(in: .whitespacesAndNewlines)
+        do { _ = try DongleClient.baseURL(from: candidate) } catch { message = error.localizedDescription; return }
+        if currentID != nil {
+            await endSession()
+            guard currentID == nil else { return }
+        }
+        // The keychain copy (read by the broadcast extension) needs a valid server address;
+        // before one is saved the app-side setting alone drives the input-tool check.
+        if !address.isEmpty {
+            do { try SharedConfiguration(address: address, inputToolAddress: candidate).save() }
+            catch { message = error.localizedDescription; return }
+        }
+        inputTool = candidate
+        draftInputTool = candidate
+        editingInputTool = false
+        setup.useInputTool(address: candidate)
+        refreshID += 1
+    }
+
     private func connectOnboardingServer() async {
         working = true; message = nil
         defer { working = false }
@@ -263,7 +307,7 @@ struct RelayView: View {
             guard currentID == nil else { return }
         }
         do {
-            try SharedConfiguration(address: candidate, sessionID: currentID).save()
+            try SharedConfiguration(address: candidate, sessionID: currentID, inputToolAddress: inputTool).save()
             address = candidate
             onboardingStep = 2
             refreshID += 1
@@ -283,7 +327,7 @@ struct RelayView: View {
             guard currentID == nil else { return }
         }
         do {
-            try SharedConfiguration(address: candidate).save()
+            try SharedConfiguration(address: candidate, inputToolAddress: inputTool).save()
             address = candidate
             calibrationRequested = false
             editingServer = false
@@ -314,7 +358,7 @@ struct RelayView: View {
             currentID = id
             setup.reset()
             setup.sessionID = id; setup.sessionState = "starting"
-            try SharedConfiguration(address: address, sessionID: id).save()
+            try SharedConfiguration(address: address, sessionID: id, inputToolAddress: inputTool).save()
             activityNote = await SessionActivity.start(id)
             _ = await SessionActivity.syncPush(address: address, deviceID: SharedConfiguration.localDeviceID())
             openBroadcastConfirmation()

@@ -5,17 +5,23 @@ struct SharedConfiguration: Codable {
     let address: String
     let deviceID: String?
     let sessionID: String?
+    /// HTTP address of the input tool; nil means the USB XIAO at DongleClient.defaultAddress.
+    /// Shared with the broadcast extension through the keychain, like the server address.
+    let inputToolAddress: String?
 
     private enum CodingKeys: String, CodingKey {
         case address
         case deviceID
         case sessionID
+        case inputToolAddress
     }
 
-    init(address: String, sessionID: String? = nil) {
+    init(address: String, sessionID: String? = nil, inputToolAddress: String? = nil) {
         self.address = address
         self.deviceID = Self.localDeviceID()
         self.sessionID = sessionID
+        let trimmed = (inputToolAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        self.inputToolAddress = trimmed.isEmpty ? nil : trimmed
     }
 
     init(from decoder: Decoder) throws {
@@ -23,7 +29,10 @@ struct SharedConfiguration: Codable {
         address = try values.decode(String.self, forKey: .address)
         deviceID = try values.decodeIfPresent(String.self, forKey: .deviceID)
         sessionID = try values.decodeIfPresent(String.self, forKey: .sessionID)
+        inputToolAddress = try values.decodeIfPresent(String.self, forKey: .inputToolAddress)
     }
+
+    var inputToolURL: URL { (try? DongleClient.baseURL(from: inputToolAddress)) ?? DongleClient.defaultBaseURL }
 
     static func localDeviceID() -> String {
         let key = "calibrationDeviceID"
@@ -47,6 +56,7 @@ struct SharedConfiguration: Codable {
               url.host != nil, url.path == "/device" else {
             throw RelayError(message: "Enter a valid control server address")
         }
+        _ = try DongleClient.baseURL(from: inputToolAddress)
         try persist()
     }
 

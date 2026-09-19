@@ -21,6 +21,7 @@
         <string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationPortraitUpsideDown</string>
         <string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string>
     </array>
-    <key>NSLocalNetworkUsageDescription</key><string>Connect to your control server and the attached XIAO input tool.</string>
+    <key>NSLocalNetworkUsageDescription</key><string>Connect to your control server and the input tool (USB XIAO RP2040 or Wi-Fi ESP32-PICO-KIT).</string>
+    <key>NSBonjourServices</key><array><string>_http._tcp</string><string>_phoneuse._tcp</string></array>
     <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 </dict></plist>

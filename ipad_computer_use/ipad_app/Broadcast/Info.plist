@@ -21,6 +21,8 @@
     </dict>
     <key>RelayKeychainGroup</key><string>$(AppIdentifierPrefix)$(KEY_RELAY_BUNDLE_ID)</string>
     <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
+    <key>NSLocalNetworkUsageDescription</key><string>Forward input to the input tool (USB XIAO RP2040 or Wi-Fi ESP32-PICO-KIT).</string>
+    <key>NSBonjourServices</key><array><string>_http._tcp</string><string>_phoneuse._tcp</string></array>
     <key>NSExtension</key><dict>
         <key>NSExtensionPointIdentifier</key><string>com.apple.broadcast-services-upload</string>
         <key>NSExtensionPrincipalClass</key><string>$(PRODUCT_MODULE_NAME).SampleHandler</string>

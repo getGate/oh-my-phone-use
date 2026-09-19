@@ -153,13 +153,13 @@ final class RelayConnection {
             guard let secret = inputDeviceSecret, !secret.isEmpty else { throw RelayError(message: "Input device secret missing") }
             let initial = try await dongle.status()
             try Task.checkCancellation()
-            guard !initial.running, initial.hidReady else { throw RelayError(message: "XIAO is busy or its keyboard is not ready") }
+            guard !initial.running, initial.hidReady else { throw RelayError(message: "Input tool is busy or its HID link is not ready") }
             activeSecret = secret
             attempted = true
             try await dongle.run(hex: hex, secret: secret)
             try Task.checkCancellation()
             dongleStatus = "Typing"
-            lastResult = "Accepted by XIAO"
+            lastResult = "Accepted by input tool"
             onState?("Sending input")
             try await send(["type": "accepted", "id": id], on: ws)
             let deadline = Date().addingTimeInterval(75)
@@ -175,13 +175,13 @@ final class RelayConnection {
                     return
                 }
             }
-            throw RelayError(message: "XIAO completion timed out; result unknown")
+            throw RelayError(message: "Input tool completion timed out; result unknown")
         } catch {
             // Cleanup uses a new task because the execution task may already be cancelled.
             if attempted, let secret = activeSecret {
                 let cleanup = Task { try await dongle.stop(secret: secret) }
                 do { try await cleanup.value }
-                catch { dongleStatus = "Stop unconfirmed. Unplug XIAO to stop input." }
+                catch { dongleStatus = "Stop unconfirmed. Unplug or reset the input tool to stop input." }
             }
             let message = Task.isCancelled ? "Cancelled; some keys may already have been sent" : error.localizedDescription
             lastResult = message

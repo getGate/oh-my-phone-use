@@ -54,6 +54,43 @@ final class StatusProtocol: URLProtocol {
         }
         precondition((try? JSONDecoder().decode(DongleStatus.self,
             from: Data("{\"device\":\"XIAO Input Tool\"}".utf8))) == nil)
+        // Input tool address: USB XIAO default versus a Wi-Fi ESP32-PICO-KIT address.
+        precondition(try! DongleClient.baseURL(from: nil).absoluteString == "http://172.31.254.1")
+        precondition(try! DongleClient.baseURL(from: "  ").absoluteString == "http://172.31.254.1")
+        precondition(try! DongleClient.baseURL(from: "http://phoneuse.local").absoluteString == "http://phoneuse.local")
+        precondition(try! DongleClient.baseURL(from: " HTTP://192.168.1.50:8080/ ").host(percentEncoded: false) == "192.168.1.50")
+        for bad in ["phoneuse.local", "ws://host/device", "http://user:pw@host", "http://host/status", "http://host?x=1", "http://"] {
+            precondition((try? DongleClient.baseURL(from: bad)) == nil, bad)
+        }
+        precondition(DongleClient.configured("nonsense").baseURL == DongleClient.defaultBaseURL)
+        precondition(DongleClient.configured("http://phoneuse.local").host == "phoneuse.local")
+        precondition(DongleClient().host == "172.31.254.1")
+        let esp = try! JSONDecoder().decode(DongleStatus.self, from: Data(
+            "{\"device\":\"PhoneUse ESP32\",\"transport\":\"Wi-Fi + BLE\",\"running\":false,\"state\":\"idle\",\"hidReady\":false,\"reports\":3,\"bleConnected\":false,\"hint\":\"Pair the tool\"}".utf8))
+        precondition(esp.transport == "Wi-Fi + BLE" && esp.hint == "Pair the tool" && !esp.hidReady)
+        precondition(SetupStatus.describe(esp) == "Pair the tool")
+        let espReady = try! JSONDecoder().decode(DongleStatus.self, from: Data(
+            "{\"device\":\"PhoneUse ESP32\",\"transport\":\"Wi-Fi + BLE\",\"running\":false,\"state\":\"done\",\"hidReady\":true}".utf8))
+        precondition(SetupStatus.describe(espReady) == "PhoneUse ESP32 · Wi-Fi + BLE")
+        precondition(SetupStatus.describe(tool) == "XIAO RP2040 · USB")
+        precondition(SetupStatus.describe(unidentified) == "Input tool · USB")
+        let espBusy = try! JSONDecoder().decode(DongleStatus.self, from: Data(
+            "{\"device\":\"PhoneUse ESP32\",\"transport\":\"Wi-Fi + BLE\",\"running\":true,\"state\":\"typing\",\"hidReady\":true}".utf8))
+        precondition(SetupStatus.describe(espBusy) == "Input tool is sending input")
+        let storedTool = try! JSONSerialization.data(withJSONObject: [
+            "address": "wss://control.example/device", "sessionID": "s", "deviceID": "d", "inputToolAddress": "http://phoneuse.local"
+        ])
+        let keptTool = try! JSONSerialization.jsonObject(with: try! SharedConfiguration.revokingSession(in: storedTool)) as! [String: String]
+        precondition(keptTool["inputToolAddress"] == "http://phoneuse.local" && keptTool["sessionID"] == nil)
+        let decodedTool = try! JSONDecoder().decode(SharedConfiguration.self, from: storedTool)
+        precondition(decodedTool.inputToolAddress == "http://phoneuse.local" && decodedTool.inputToolURL.absoluteString == "http://phoneuse.local")
+        let legacy = try! JSONDecoder().decode(SharedConfiguration.self, from: Data("{\"address\":\"wss://control.example/device\"}".utf8))
+        precondition(legacy.inputToolAddress == nil && legacy.inputToolURL == DongleClient.defaultBaseURL)
+        let encoded = try! JSONSerialization.jsonObject(with: try! JSONEncoder().encode(
+            SharedConfiguration(address: "wss://control.example/device", inputToolAddress: " http://192.168.1.9 "))) as! [String: Any]
+        precondition(encoded["inputToolAddress"] as? String == "http://192.168.1.9")
+        precondition((try! JSONSerialization.jsonObject(with: try! JSONEncoder().encode(
+            SharedConfiguration(address: "wss://control.example/device", inputToolAddress: ""))) as! [String: Any])["inputToolAddress"] == nil)
         let configuration = URLSessionConfiguration.ephemeral
         let broadcastError = RelayError(message: "Start a new session in the iPad app") as NSError
         precondition(broadcastError.domain == "iPadComputerUse")
@@ -136,6 +173,13 @@ final class StatusProtocol: URLProtocol {
         StatusProtocol.request = nil
         await state.refresh(address: address, checkInput: false)
         precondition(StatusProtocol.request != nil && state.serverReachable && state.calibrated == true)
+        state.inputReady = true; state.inputCompatible = true
+        state.useInputTool(address: "http://phoneuse.local")
+        precondition(state.inputReady == nil && !state.inputCompatible && state.inputDetail == "Checking input tool")
+        state.inputReady = true
+        state.useInputTool(address: " http://phoneuse.local ")
+        precondition(state.inputReady == true)
+        print("Input tool address handling passed: USB default, Wi-Fi ESP32 address validation, status decoding for both firmwares.")
         print("Selective refresh passed: healthy idle skips requests; pointer-only and server-only retries; active-session telemetry; manual refresh recovery.")
         print("Setup status tests passed: connections, loading, cancellation, retry backoff, manual retry, recovery, and reset.")
     }

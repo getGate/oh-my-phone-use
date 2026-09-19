@@ -1,10 +1,14 @@
 # Input tool HTTP protocol
 
-Base URL: `http://172.31.254.1`. Transport is the attached USB NCM interface.
+Base URL: `http://172.31.254.1` for the XIAO RP2040 (transport: the attached USB
+NCM interface), or the address saved in the iPad app for the ESP32-PICO-KIT
+(`http://phoneuse.local` or `http://<ip>`, transport: Wi-Fi). Both firmwares
+implement the routes, records, limits and status codes below.
 `GET /status` returns non-sensitive readiness state. Mutating requests require
-the `X-Input-Device-Secret` header. By default, the firmware build script embeds
-the secret stored in `control_server/.state/input_device_secret`, or the value of
-`INPUT_DEVICE_SECRET` when that environment variable is set.
+the `X-Input-Device-Secret` header. By default, the XIAO firmware build script
+embeds the secret stored in `control_server/.state/input_device_secret`, or the
+value of `INPUT_DEVICE_SECRET` when that environment variable is set; the ESP32
+stores the same secret in NVS (`input_device/scripts/esp32_provision.sh`).
 
 | Route | Behavior |
 | --- | --- |
@@ -44,3 +48,21 @@ Unplug the tool when input release cannot be confirmed.
 
 The protocol carries relative HID counts, not screenshot coordinates. Neither
 the firmware nor its codec knows the current iPad pointer position.
+
+## ESP32-PICO-KIT specifics
+
+- `hidReady` is true only while a phone is connected over Bluetooth LE. While it
+  is false, `POST /input` returns 409 with an explanatory `error`.
+- `GET /status` additionally reports `transport` (`"Wi-Fi + BLE"`),
+  `bleConnected`, `bleAdvertising`, `bonds`, `buttons`, `secretConfigured`,
+  `wifiConnected`, `ssid`, `ip`, `rssi`, `hostname`, `batches`, `uptime`, and,
+  while something needs attention, a human-readable `hint`. `reports` counts
+  HID reports accepted by the Bluetooth stack.
+- `waitMs` is the remaining time of the wait record being executed.
+- The HTTP handler runs in its own task, so requests are answered while a key
+  or button is held and `POST /stop` is honoured within a few milliseconds
+  (during waits, at 20 ms granularity). A stop always releases every key and
+  button, also when nothing is running, and sets `state` to `stopped`.
+- A batch also stops (with all input released) when the Bluetooth link drops or
+  the 70-second deadline passes.
+- Bodies larger than the 5120-character limit return 413 instead of 400.
