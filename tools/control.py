@@ -17,8 +17,11 @@ Examples:
     python3 tools/control.py secret clear
     python3 tools/control.py -p /dev/cu.usbserial-XXXXX ping
     python3 tools/control.py repl          # interactive session, one command per line
+    python3 tools/control.py -b 230400 call            # HFP test build: call state (see tools/call_audio.py)
+    python3 tools/control.py -b 230400 dial 10086      # also: answer, hangup, audio [tone|loop|off]
 
 The serial port is taken from -p/--port, else $PHONEUSE_PORT, else auto-detected (CP210x bridge).
+The baud rate is taken from -b/--baud, else $PHONEUSE_BAUD, else 115200.
 Exit status: 0 = OK/PONG/STATUS, 1 = ERR from the firmware, 2 = usage, port or timeout error.
 """
 import argparse
@@ -32,12 +35,13 @@ try:
 except ImportError:  # pragma: no cover
     sys.exit("pyserial is required:  python3 -m pip install pyserial")
 
-DEFAULT_BAUD = 115200
+DEFAULT_BAUD = 115200               # the HFP call audio test build (sdkconfig.hfp_test) uses 230400
 DEFAULT_TIMEOUT = 5.0
-RESPONSE_WORDS = ("OK", "ERR", "PONG", "STATUS", "WIFI", "SECRET")
+RESPONSE_WORDS = ("OK", "ERR", "PONG", "STATUS", "WIFI", "SECRET", "CALL", "AUDIO")
 CP210X_VID = 0x10C4
 COMMANDS = ("move", "click", "down", "up", "scroll", "type", "key", "keydown", "keyup",
-            "ping", "status", "unpair", "wifi", "secret", "raw", "repl")
+            "ping", "status", "unpair", "wifi", "secret", "call", "dial", "answer", "hangup", "audio",
+            "raw", "repl")
 
 
 def find_port():
@@ -131,9 +135,16 @@ def build_line(command, args):
     if command == "scroll":
         need(1)
         return "SCROLL %d" % int(args[0]), None
-    if command in ("click", "down", "up", "ping", "status", "unpair"):
+    if command in ("click", "down", "up", "ping", "status", "unpair", "call", "answer", "hangup"):
         need(0)
         return command.upper(), None
+    if command == "dial":
+        need(1)
+        return "DIAL " + args[0], None
+    if command == "audio":
+        if len(args) > 1:
+            raise ValueError("audio takes off, tone, loop, stream, connect or disconnect")
+        return " ".join(["AUDIO"] + [a.upper() for a in args]), None
     if command in ("key", "keydown", "keyup"):
         need(1)
         return "%s %s" % (command.upper(), args[0]), None
@@ -195,7 +206,8 @@ def main(argv=None):
         epilog="commands: " + " ".join(COMMANDS) + "\n" + __doc__.split("Examples:")[1],
     )
     parser.add_argument("-p", "--port", help="serial port (default: $PHONEUSE_PORT or auto-detect)")
-    parser.add_argument("-b", "--baud", type=int, default=DEFAULT_BAUD)
+    parser.add_argument("-b", "--baud", type=int, default=int(os.environ.get("PHONEUSE_BAUD", DEFAULT_BAUD)),
+                        help="baud rate (default: $PHONEUSE_BAUD or %d)" % DEFAULT_BAUD)
     parser.add_argument("-t", "--timeout", type=float, default=DEFAULT_TIMEOUT,
                         help="seconds to wait for a response (default %(default)s)")
     parser.add_argument("-v", "--verbose", action="store_true", help="show firmware log lines on stderr")
@@ -228,7 +240,7 @@ def main(argv=None):
             print("ERR timeout (no response from firmware on %s)" % port)
             return 2
         print(response)
-        return 0 if response.split(" ", 1)[0] in ("OK", "PONG", "STATUS", "WIFI", "SECRET") else 1
+        return 0 if response.split(" ", 1)[0] != "ERR" else 1
     finally:
         dev.close()
 

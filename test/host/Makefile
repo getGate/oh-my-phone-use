@@ -5,12 +5,14 @@ CC      ?= cc
 ROOT    := ../..
 CFLAGS  ?= -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -O1 -g
 CFLAGS  += -Istubs -I. -I$(ROOT)/components/command/include -I$(ROOT)/components/hid/include \
-           -I$(ROOT)/components/input_tool/include
+           -I$(ROOT)/components/input_tool/include -I$(ROOT)/components/hfp/include
 SRCS    := test_main.c mock_hid.c \
            $(ROOT)/components/command/command_parser.c \
            $(ROOT)/components/hid/hid_keymap.c \
            $(ROOT)/components/hid/hid_motion.c \
-           $(ROOT)/components/input_tool/input_records.c
+           $(ROOT)/components/input_tool/input_records.c \
+           $(ROOT)/components/hfp/audio_codec.c \
+           $(ROOT)/components/hfp/call_audio.c
 
 all: build/test_host
 

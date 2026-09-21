@@ -1,5 +1,14 @@
 menu "PhoneUse: HID device"
 
+    config PHONEUSE_HID_ENABLE
+        bool "Enable the Bluetooth LE HID mouse + keyboard"
+        default y
+        depends on BT_BLE_ENABLED
+        help
+            Off: the HID commands stay in the protocol but answer "ERR not_connected", and no
+            BLE HID device is advertised. Used by the HFP call audio test (sdkconfig.hfp_test),
+            which runs the controller in Classic BT only mode.
+
     config PHONEUSE_HID_DEVICE_NAME
         string "Bluetooth device name shown on the iPhone"
         default "PhoneUse HID"

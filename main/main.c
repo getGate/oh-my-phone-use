@@ -34,6 +34,10 @@
 #include "wifi_link.h"
 #endif
 
+#if CONFIG_PHONEUSE_HFP_ENABLE
+#include "hfp_client.h"
+#endif
+
 static const char *TAG = "main";
 
 static uint32_t uptime_seconds(void)
@@ -90,6 +94,38 @@ static void start_input_tool(void)
 
 #endif /* CONFIG_PHONEUSE_INPUT_TOOL_ENABLE */
 
+#if CONFIG_PHONEUSE_HFP_ENABLE
+
+static esp_err_t call_control(command_call_op_t op, const char *number)
+{
+    switch (op) {
+    case COMMAND_CALL_DIAL:   return hfp_client_dial(number);
+    case COMMAND_CALL_ANSWER: return hfp_client_answer();
+    case COMMAND_CALL_HANGUP: return hfp_client_hangup();
+    default:                  return ESP_ERR_INVALID_ARG;
+    }
+}
+
+static esp_err_t audio_control(command_audio_op_t op)
+{
+    switch (op) {
+    case COMMAND_AUDIO_OFF:        call_audio_set_mode(CALL_AUDIO_OFF); return ESP_OK;
+    case COMMAND_AUDIO_TONE:       call_audio_set_mode(CALL_AUDIO_TONE); return ESP_OK;
+    case COMMAND_AUDIO_LOOP:       call_audio_set_mode(CALL_AUDIO_LOOP); return ESP_OK;
+    case COMMAND_AUDIO_STREAM:     call_audio_set_mode(CALL_AUDIO_STREAM); return ESP_OK;
+    case COMMAND_AUDIO_CONNECT:    return hfp_client_audio_link(true);
+    case COMMAND_AUDIO_DISCONNECT: return hfp_client_audio_link(false);
+    default:                       return ESP_ERR_INVALID_ARG;
+    }
+}
+
+static void audio_in(const char *payload)
+{
+    call_audio_host_in(payload);
+}
+
+#endif /* CONFIG_PHONEUSE_HFP_ENABLE */
+
 void app_main(void)
 {
     /* NVS holds the BLE bonding keys, the Wi-Fi credentials and the input-device secret. */
@@ -110,20 +146,37 @@ void app_main(void)
         .secret_status = secret_status_body,
         .secret_set = input_secret_set,
 #endif
+#if CONFIG_PHONEUSE_HFP_ENABLE
+        .call_status = hfp_client_call_status,
+        .call_control = call_control,
+        .audio_status = hfp_client_audio_status,
+        .audio_control = audio_control,
+        .audio_in = audio_in,
+        .call_unpair = hfp_client_unpair_all,
+#endif
     };
     command_parser_init(&platform);
     ESP_ERROR_CHECK(serial_console_start());
 
     ESP_ERROR_CHECK(bt_stack_init());
     ESP_ERROR_CHECK(hid_device_init());
+#if CONFIG_PHONEUSE_HFP_ENABLE
+    /* Events ("EVT ...") and call audio ("A ...") go to the host as unsolicited console lines. */
+    ESP_ERROR_CHECK_WITHOUT_ABORT(hfp_client_start(serial_console_write_line));
+#endif
 
 #if CONFIG_PHONEUSE_INPUT_TOOL_ENABLE
     start_input_tool();
     ESP_LOGI(TAG, "PhoneUse ready: BLE HID \"%s\", input-tool API on port %d",
              CONFIG_PHONEUSE_HID_DEVICE_NAME, CONFIG_PHONEUSE_INPUT_TOOL_HTTP_PORT);
-#else
+#elif CONFIG_PHONEUSE_HID_ENABLE
     ESP_LOGI(TAG, "PhoneUse HID ready (device name \"%s\"), Wi-Fi input tool disabled",
              CONFIG_PHONEUSE_HID_DEVICE_NAME);
+#else
+    ESP_LOGI(TAG, "Bluetooth HID and the Wi-Fi input tool are disabled in this build");
+#endif
+#if CONFIG_PHONEUSE_HFP_ENABLE
+    ESP_LOGI(TAG, "PhoneUse call audio ready: hands-free unit \"%s\"", CONFIG_PHONEUSE_HFP_DEVICE_NAME);
 #endif
     ESP_LOGI(TAG, "free heap after start-up: %lu bytes", (unsigned long)esp_get_free_heap_size());
 }

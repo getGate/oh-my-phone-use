@@ -73,6 +73,18 @@ static size_t hook_result(char *out, size_t size, esp_err_t err)
     }
 }
 
+/* Outcome of a call / call audio hook: ESP_ERR_INVALID_STATE means that no phone is connected. */
+static size_t call_result(char *out, size_t size, esp_err_t err)
+{
+    switch (err) {
+    case ESP_OK:                return reply(out, size, "OK");
+    case ESP_ERR_INVALID_ARG:   return reply(out, size, "ERR invalid_args");
+    case ESP_ERR_INVALID_STATE: return reply(out, size, "ERR not_connected");
+    case ESP_ERR_NOT_SUPPORTED: return reply(out, size, "ERR unsupported");
+    default:                    return reply(out, size, "ERR failed");
+    }
+}
+
 static bool parse_int(const char *token, long min, long max, int *value)
 {
     char *end = NULL;
@@ -268,6 +280,51 @@ static size_t secret_command(char *out, size_t size, char *rest)
     return hook_result(out, size, s_platform.secret_set(argv[0]));
 }
 
+static bool dial_number_valid(const char *number)
+{
+    size_t len = strlen(number);
+    if (len < 1 || len > COMMAND_DIAL_MAX) {
+        return false;
+    }
+    for (const char *p = number; *p; p++) {
+        if (!isdigit((unsigned char)*p) && *p != '*' && *p != '#' && *p != '+') {
+            return false;
+        }
+    }
+    return true;
+}
+
+static size_t audio_command(char *out, size_t size, char **args, int argc)
+{
+    static const struct {
+        const char *name;
+        command_audio_op_t op;
+    } OPS[] = {
+        { "OFF", COMMAND_AUDIO_OFF },       { "TONE", COMMAND_AUDIO_TONE },
+        { "LOOP", COMMAND_AUDIO_LOOP },     { "STREAM", COMMAND_AUDIO_STREAM },
+        { "CONNECT", COMMAND_AUDIO_CONNECT }, { "DISCONNECT", COMMAND_AUDIO_DISCONNECT },
+    };
+    if (argc == 0) {
+        if (!s_platform.audio_status) {
+            return reply(out, size, "ERR unsupported");
+        }
+        char body[COMMAND_RESPONSE_MAX];
+        s_platform.audio_status(body, sizeof(body));
+        return reply(out, size, "AUDIO %s", body);
+    }
+    if (!s_platform.audio_control) {
+        return reply(out, size, "ERR unsupported");
+    }
+    if (argc == 1) {
+        for (size_t i = 0; i < sizeof(OPS) / sizeof(OPS[0]); i++) {
+            if (strcasecmp(args[0], OPS[i].name) == 0) {
+                return call_result(out, size, s_platform.audio_control(OPS[i].op));
+            }
+        }
+    }
+    return reply(out, size, "ERR invalid_args");
+}
+
 size_t command_parser_execute(const char *line, char *response, size_t response_size)
 {
     if (!line || !response || response_size == 0) {
@@ -303,6 +360,20 @@ size_t command_parser_execute(const char *line, char *response, size_t response_
     if (*p) {
         *p++ = '\0';
         rest = p;
+    }
+
+    /* Call audio for the phone: up to 50 lines a second, never answered. */
+    if (word[0] == 'A' && word[1] == '\0') {
+        if (!s_platform.audio_in) {
+            return reply(response, response_size, "ERR unsupported");
+        }
+        while (rest && (*rest == ' ' || *rest == '\t')) {
+            rest++;
+        }
+        if (rest && *rest) {
+            s_platform.audio_in(rest);
+        }
+        return 0;
     }
 
     /* Commands that keep their argument text verbatim (spaces matter). */
@@ -361,14 +432,42 @@ size_t command_parser_execute(const char *line, char *response, size_t response_
         key_action_t action = (word[3] == '\0') ? CMD_KEY_PRESS : (word[3] == 'D' ? CMD_KEY_DOWN : CMD_KEY_UP);
         return key_command(response, response_size, args[0], action);
     }
+    if (strcmp(word, "AUDIO") == 0) {
+        return audio_command(response, response_size, args, argc);
+    }
+    if (strcmp(word, "DIAL") == 0) {
+        if (!s_platform.call_control) {
+            return reply(response, response_size, "ERR unsupported");
+        }
+        if (argc != 1 || !dial_number_valid(args[0])) {
+            return reply(response, response_size, "ERR invalid_args");
+        }
+        return call_result(response, response_size, s_platform.call_control(COMMAND_CALL_DIAL, args[0]));
+    }
 
     /* Argument-less commands. */
     if (argc != 0) {
         if (strcmp(word, "CLICK") == 0 || strcmp(word, "DOWN") == 0 || strcmp(word, "UP") == 0 ||
-            strcmp(word, "UNPAIR") == 0) {
+            strcmp(word, "UNPAIR") == 0 || strcmp(word, "CALL") == 0 || strcmp(word, "ANSWER") == 0 ||
+            strcmp(word, "HANGUP") == 0) {
             return reply(response, response_size, "ERR invalid_args");
         }
         return reply(response, response_size, "ERR invalid_command");
+    }
+    if (strcmp(word, "CALL") == 0) {
+        if (!s_platform.call_status) {
+            return reply(response, response_size, "ERR unsupported");
+        }
+        char body[COMMAND_RESPONSE_MAX];
+        s_platform.call_status(body, sizeof(body));
+        return reply(response, response_size, "CALL %s", body);
+    }
+    if (strcmp(word, "ANSWER") == 0 || strcmp(word, "HANGUP") == 0) {
+        if (!s_platform.call_control) {
+            return reply(response, response_size, "ERR unsupported");
+        }
+        command_call_op_t op = word[0] == 'A' ? COMMAND_CALL_ANSWER : COMMAND_CALL_HANGUP;
+        return call_result(response, response_size, s_platform.call_control(op, NULL));
     }
     if (strcmp(word, "CLICK") == 0) {
         return result(response, response_size, hid_click());
@@ -380,7 +479,11 @@ size_t command_parser_execute(const char *line, char *response, size_t response_
         return result(response, response_size, hid_mouse_up());
     }
     if (strcmp(word, "UNPAIR") == 0) {
-        return result(response, response_size, hid_unpair_all());
+        esp_err_t err = hid_unpair_all();
+        if (err == ESP_OK && s_platform.call_unpair) {
+            return call_result(response, response_size, s_platform.call_unpair());
+        }
+        return result(response, response_size, err);
     }
     return reply(response, response_size, "ERR invalid_command");
 }

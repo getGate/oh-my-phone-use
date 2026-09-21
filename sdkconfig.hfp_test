@@ -1,0 +1,37 @@
+# ---------------------------------------------------------------------------
+# HFP call audio test build: the board is only a hands-free unit (car kit) for the iPhone.
+# Bluetooth LE HID and the Wi-Fi input tool are off, so nothing else uses the radio or the RAM.
+# Applied on top of sdkconfig.defaults (see README, "HFP call audio test"):
+#
+#   idf.py -B build_hfp -D SDKCONFIG=build_hfp/sdkconfig \
+#          -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.hfp_test" build
+# ---------------------------------------------------------------------------
+CONFIG_PHONEUSE_HID_ENABLE=n
+CONFIG_PHONEUSE_INPUT_TOOL_ENABLE=n
+CONFIG_PHONEUSE_HFP_ENABLE=y
+
+# Controller: Classic BT only, one synchronous (SCO/eSCO) link, audio over HCI to the host.
+# CONFIG_BTDM_CTRL_MODE_BTDM is not set
+CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY=y
+CONFIG_BTDM_CTRL_BR_EDR_MAX_SYNC_CONN=1
+CONFIG_BTDM_CTRL_BR_EDR_SCO_DATA_PATH_HCI=y
+
+# Bluedroid: no BLE host; HFP hands-free unit with the application-side audio API.
+# Wide band speech stays off: CVSD is transcoded by the controller, so the firmware sees
+# 8 kHz 16-bit PCM and needs no codec.
+CONFIG_BT_BLE_ENABLED=n
+CONFIG_BT_CLASSIC_ENABLED=y
+CONFIG_BT_HFP_ENABLE=y
+CONFIG_BT_HFP_CLIENT_ENABLE=y
+CONFIG_BT_HFP_AG_ENABLE=n
+CONFIG_BT_HFP_AUDIO_DATA_PATH_HCI=y
+CONFIG_BT_HFP_USE_EXTERNAL_CODEC=y
+CONFIG_BT_HFP_WBS_ENABLE=n
+
+# The call audio shares the console UART: 8 kHz mu-law as base64 text is about 110 kbit/s in
+# each direction, too much for 115200 baud. The baud rate is only configurable for the
+# "custom" console UART (same UART0 and pins as the default one).
+# CONFIG_ESP_CONSOLE_UART_DEFAULT is not set
+CONFIG_ESP_CONSOLE_UART_CUSTOM=y
+CONFIG_ESP_CONSOLE_UART_CUSTOM_NUM_0=y
+CONFIG_ESP_CONSOLE_UART_BAUDRATE=230400

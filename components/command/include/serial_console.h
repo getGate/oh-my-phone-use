@@ -14,6 +14,12 @@ extern "C" {
 
 esp_err_t serial_console_start(void);
 
+/**
+ * @brief Send one unsolicited line to the host (an event or call audio); the newline is added.
+ *        Lines longer than COMMAND_RESPONSE_MAX are cut. Safe from any task, not from an ISR.
+ */
+void serial_console_write_line(const char *line);
+
 #ifdef __cplusplus
 }
 #endif

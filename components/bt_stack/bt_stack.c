@@ -16,8 +16,12 @@ esp_err_t bt_stack_init(void)
     }
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-#if CONFIG_PHONEUSE_BT_KEEP_CLASSIC
+#if CONFIG_PHONEUSE_BT_KEEP_CLASSIC && CONFIG_BT_BLE_ENABLED
     esp_bt_mode_t mode = ESP_BT_MODE_BTDM;
+#elif CONFIG_PHONEUSE_BT_KEEP_CLASSIC
+    esp_bt_mode_t mode = ESP_BT_MODE_CLASSIC_BT;
+    /* No BLE host in this build: give the BLE controller memory back to the heap. */
+    ESP_RETURN_ON_ERROR(esp_bt_controller_mem_release(ESP_BT_MODE_BLE), TAG, "mem release");
 #else
     esp_bt_mode_t mode = ESP_BT_MODE_BLE;
     /* Give the Classic BT controller memory back to the heap; must happen before init. */
@@ -34,7 +38,8 @@ esp_err_t bt_stack_init(void)
     ESP_RETURN_ON_ERROR(esp_bluedroid_enable(), TAG, "bluedroid enable");
 
     s_ready = true;
-    ESP_LOGI(TAG, "Bluetooth ready (%s)", mode == ESP_BT_MODE_BTDM ? "BLE + Classic BT" : "BLE only");
+    ESP_LOGI(TAG, "Bluetooth ready (%s)", mode == ESP_BT_MODE_BTDM ? "BLE + Classic BT" :
+             mode == ESP_BT_MODE_CLASSIC_BT ? "Classic BT only" : "BLE only");
     return ESP_OK;
 }
 

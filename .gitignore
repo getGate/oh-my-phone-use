@@ -17,3 +17,9 @@ __pycache__/
 .upstream/
 # Xcode build output that upstream committed by accident; not source
 ipad_computer_use/ipad_app/build_iphone/
+
+# HFP call audio test build (README, "HFP call audio test")
+build_hfp/
+
+# Call recordings of tools/call_audio.py (private audio)
+*.wav

@@ -1,0 +1,23 @@
+menu "PhoneUse: HFP call audio"
+
+    config PHONEUSE_HFP_ENABLE
+        bool "Enable the hands-free unit (call control and call audio over Classic Bluetooth)"
+        default n
+        depends on BT_CLASSIC_ENABLED && BT_HFP_CLIENT_ENABLE
+        depends on BT_HFP_AUDIO_DATA_PATH_HCI && BT_HFP_USE_EXTERNAL_CODEC
+        select PHONEUSE_BT_KEEP_CLASSIC
+        help
+            The board connects to the iPhone as a car kit (HFP hands-free unit). The serial
+            commands CALL, DIAL, ANSWER, HANGUP and AUDIO control calls, and the call audio
+            (CVSD, 8 kHz) goes to the host as "A <base64 mu-law>" lines.
+
+            Needs the HCI audio data path in the controller and in Bluedroid, and the external
+            codec API. Disable CONFIG_BT_HFP_WBS_ENABLE: this firmware handles CVSD only.
+            sdkconfig.hfp_test holds a complete configuration for the call audio test.
+
+    config PHONEUSE_HFP_DEVICE_NAME
+        string "Classic Bluetooth name shown on the iPhone"
+        default "PhoneUse Audio"
+        depends on PHONEUSE_HFP_ENABLE
+
+endmenu

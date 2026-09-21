@@ -4,10 +4,13 @@
  * Build and run with `make -C test/host test` (plain clang/gcc, no ESP-IDF needed).
  */
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "audio_codec.h"
+#include "call_audio.h"
 #include "command_parser.h"
 #include "hid_keymap.h"
 #include "hid_motion.h"
@@ -279,6 +282,373 @@ static void test_network_commands(void)
     expect("CLICK", "OK", "click();");
 }
 
+/* ---- call commands (HFP) --------------------------------------------------------------- */
+
+static size_t fake_call_status(char *out, size_t size)
+{
+    return (size_t)snprintf(out, size, "slc=1 audio=cvsd call=1 setup=none held=0 number=10086 peer=aa:bb:cc:dd:ee:ff bonds=1");
+}
+
+static esp_err_t fake_call_control(command_call_op_t op, const char *number)
+{
+    hook_record("call(%d,%s);", (int)op, number ? number : "<null>");
+    return hook_error;
+}
+
+static size_t fake_audio_status(char *out, size_t size)
+{
+    return (size_t)snprintf(out, size, "mode=stream link=1 rate=8000 peak=1234");
+}
+
+static esp_err_t fake_audio_control(command_audio_op_t op)
+{
+    hook_record("audio(%d);", (int)op);
+    return hook_error;
+}
+
+static void fake_audio_in(const char *payload)
+{
+    hook_record("audio_in(%s);", payload);
+}
+
+static esp_err_t fake_call_unpair(void)
+{
+    hook_record("call_unpair();");
+    return hook_error;
+}
+
+static void test_call_commands(void)
+{
+    /* Without the hooks the call commands exist, but are unsupported. */
+    static const command_platform_t bare = { .uptime_s = fake_uptime };
+    command_parser_init(&bare);
+    mock_reset();
+    expect("CALL", "ERR unsupported", "");
+    expect("DIAL 10086", "ERR unsupported", "");
+    expect("ANSWER", "ERR unsupported", "");
+    expect("HANGUP", "ERR unsupported", "");
+    expect("AUDIO", "ERR unsupported", "");
+    expect("AUDIO TONE", "ERR unsupported", "");
+    expect("A AAAA", "ERR unsupported", "");
+    expect("UNPAIR", "OK", "unpair();");
+
+    static const command_platform_t platform = {
+        .uptime_s = fake_uptime,
+        .call_status = fake_call_status,
+        .call_control = fake_call_control,
+        .audio_status = fake_audio_status,
+        .audio_control = fake_audio_control,
+        .audio_in = fake_audio_in,
+        .call_unpair = fake_call_unpair,
+    };
+    command_parser_init(&platform);
+    hook_error = ESP_OK;
+
+    expect("CALL", "CALL slc=1 audio=cvsd call=1 setup=none held=0 number=10086 peer=aa:bb:cc:dd:ee:ff bonds=1", "");
+    expect("call", "CALL slc=1 audio=cvsd call=1 setup=none held=0 number=10086 peer=aa:bb:cc:dd:ee:ff bonds=1", "");
+    expect("CALL now", "ERR invalid_args", "");
+
+    expect_hook("DIAL 10086", "OK", "call(0,10086);");
+    expect_hook("dial +8613800138000", "OK", "call(0,+8613800138000);");
+    expect_hook("DIAL *100#", "OK", "call(0,*100#);");
+    expect_hook("DIAL", "ERR invalid_args", "");
+    expect_hook("DIAL 10086 2", "ERR invalid_args", "");
+    expect_hook("DIAL 1-800-555", "ERR invalid_args", "");
+    expect_hook("DIAL abc", "ERR invalid_args", "");
+    expect_hook("DIAL 123456789012345678901234567890123", "ERR invalid_args", "");      /* 33 digits */
+    expect_hook("DIAL 12345678901234567890123456789012", "OK", "call(0,12345678901234567890123456789012);");
+    expect_hook("ANSWER", "OK", "call(1,<null>);");
+    expect_hook("hangup", "OK", "call(2,<null>);");
+    expect_hook("ANSWER 1", "ERR invalid_args", "");
+    expect_hook("HANGUP now", "ERR invalid_args", "");
+    hook_error = ESP_ERR_INVALID_STATE;
+    expect_hook("DIAL 10086", "ERR not_connected", "call(0,10086);");
+    expect_hook("ANSWER", "ERR not_connected", "call(1,<null>);");
+    hook_error = ESP_FAIL;
+    expect_hook("HANGUP", "ERR failed", "call(2,<null>);");
+    hook_error = ESP_OK;
+
+    expect("AUDIO", "AUDIO mode=stream link=1 rate=8000 peak=1234", "");
+    expect_hook("AUDIO OFF", "OK", "audio(0);");
+    expect_hook("AUDIO tone", "OK", "audio(1);");
+    expect_hook("audio Loop", "OK", "audio(2);");
+    expect_hook("AUDIO STREAM", "OK", "audio(3);");
+    expect_hook("AUDIO CONNECT", "OK", "audio(4);");
+    expect_hook("AUDIO DISCONNECT", "OK", "audio(5);");
+    expect_hook("AUDIO LOUD", "ERR invalid_args", "");
+    expect_hook("AUDIO TONE LOOP", "ERR invalid_args", "");
+    hook_error = ESP_ERR_INVALID_STATE;
+    expect_hook("AUDIO CONNECT", "ERR not_connected", "audio(4);");
+    hook_error = ESP_OK;
+
+    /* Audio lines: payload verbatim (base64 is case-sensitive), never a response. */
+    expect_hook("A QUJDRGVmZ2g=", "<none>", "audio_in(QUJDRGVmZ2g=);");
+    expect_hook("a   QUJDRGVmZ2g=  \r\n", "<none>", "audio_in(QUJDRGVmZ2g=);");
+    expect_hook("A", "<none>", "");
+    expect_hook("A   ", "<none>", "");
+
+    /* UNPAIR forgets the HID hosts first, then the call phones. */
+    hook_calls[0] = '\0';
+    expect("UNPAIR", "OK", "unpair();");
+    CHECK(strcmp(hook_calls, "call_unpair();") == 0);
+    hook_error = ESP_FAIL;
+    hook_calls[0] = '\0';
+    expect("UNPAIR", "ERR failed", "unpair();");
+    CHECK(strcmp(hook_calls, "call_unpair();") == 0);
+    hook_error = ESP_OK;
+    mock_force_error = ESP_FAIL;
+    hook_calls[0] = '\0';
+    expect("UNPAIR", "ERR send_failed", "unpair();");
+    CHECK(hook_calls[0] == '\0');                               /* the HID error stops the command */
+    mock_force_error = ESP_OK;
+
+    /* The HID commands are unaffected by the call hooks. */
+    expect("PING", "PONG", "");
+    expect("CLICK", "OK", "click();");
+}
+
+/* ---- call audio: codecs ---------------------------------------------------------------- */
+
+static void test_audio_codec(void)
+{
+    /* G.711 mu-law reference points. */
+    CHECK(audio_ulaw_encode(0) == 0xFF);
+    CHECK(audio_ulaw_encode(32767) == 0x80);
+    CHECK(audio_ulaw_encode(-32768) == 0x00);
+    CHECK(audio_ulaw_decode(0xFF) == 0);
+    CHECK(audio_ulaw_decode(0x7F) == 0);
+    CHECK(audio_ulaw_decode(0x80) == 32124);
+    CHECK(audio_ulaw_decode(0x00) == -32124);
+
+    /* Every code survives decode -> encode (0x7F is the second zero and folds onto 0xFF). */
+    for (int code = 0; code < 256; code++) {
+        uint8_t again = audio_ulaw_encode(audio_ulaw_decode((uint8_t)code));
+        CHECK(again == (code == 0x7F ? 0xFF : code));
+    }
+    /* The error of one encode -> decode pass stays inside the segment step, the sign is kept. */
+    for (int v = -32768; v <= 32767; v += 7) {
+        int16_t back = audio_ulaw_decode(audio_ulaw_encode((int16_t)v));
+        int magnitude = v < 0 ? -v : v;
+        int limit = magnitude > 32635 ? 1024 : 16 + magnitude / 16;
+        int error = back - v;
+        CHECK((error < 0 ? -error : error) <= limit);
+        CHECK(v == 0 || back == 0 || (v < 0) == (back < 0));
+    }
+
+    /* base64: RFC 4648 test vectors. */
+    static const struct {
+        const char *plain;
+        const char *text;
+    } VECTORS[] = {
+        { "f", "Zg==" }, { "fo", "Zm8=" }, { "foo", "Zm9v" },
+        { "foob", "Zm9vYg==" }, { "fooba", "Zm9vYmE=" }, { "foobar", "Zm9vYmFy" },
+    };
+    for (size_t i = 0; i < sizeof(VECTORS) / sizeof(VECTORS[0]); i++) {
+        char text[16];
+        uint8_t plain[16];
+        size_t len = strlen(VECTORS[i].plain);
+        CHECK(audio_b64_encode((const uint8_t *)VECTORS[i].plain, len, text, sizeof(text)) == strlen(VECTORS[i].text));
+        CHECK(strcmp(text, VECTORS[i].text) == 0);
+        CHECK(audio_b64_decode(VECTORS[i].text, plain, sizeof(plain)) == (int)len);
+        CHECK(memcmp(plain, VECTORS[i].plain, len) == 0);
+    }
+    uint8_t all[256], back[256];
+    char text[AUDIO_B64_ENCODED_LEN(256) + 1];
+    for (int i = 0; i < 256; i++) {
+        all[i] = (uint8_t)i;
+    }
+    CHECK(audio_b64_encode(all, sizeof(all), text, sizeof(text)) == 344);
+    CHECK(audio_b64_decode(text, back, sizeof(back)) == 256);
+    CHECK(memcmp(all, back, sizeof(all)) == 0);
+
+    uint8_t out[8];
+    char small[4];
+    CHECK(audio_b64_encode(all, 3, small, sizeof(small)) == 0);         /* no room for the NUL */
+    CHECK(audio_b64_encode(all, 0, text, sizeof(text)) == 0);
+    CHECK(audio_b64_decode("", out, sizeof(out)) == -1);
+    CHECK(audio_b64_decode("Zm9", out, sizeof(out)) == -1);             /* not a multiple of four */
+    CHECK(audio_b64_decode("Zm9v!A==", out, sizeof(out)) == -1);        /* character outside the alphabet */
+    CHECK(audio_b64_decode("Zg==Zm9v", out, sizeof(out)) == -1);        /* padding in the middle */
+    CHECK(audio_b64_decode("Z===", out, sizeof(out)) == -1);
+    CHECK(audio_b64_decode("====", out, sizeof(out)) == -1);
+    CHECK(audio_b64_decode("Zm9vYmFy", out, 5) == -1);                  /* output too small */
+    CHECK(audio_b64_decode("Zm9vYmFy", out, 6) == 6);
+}
+
+/* ---- call audio: rings, test modes, host lines ----------------------------------------- */
+
+#define AUDIO_FRAME_BYTES 120                   /* a typical CVSD packet over HCI: 60 samples */
+
+static void pcm_put(uint8_t *pcm_le, size_t index, int16_t v)
+{
+    pcm_le[2 * index] = (uint8_t)((uint16_t)v & 0xFF);
+    pcm_le[2 * index + 1] = (uint8_t)((uint16_t)v >> 8);
+}
+
+static int16_t pcm_get(const uint8_t *pcm_le, size_t index)
+{
+    return (int16_t)(uint16_t)(pcm_le[2 * index] | ((uint16_t)pcm_le[2 * index + 1] << 8));
+}
+
+static bool frame_is_silent(const uint8_t *pcm_le, size_t bytes)
+{
+    for (size_t i = 0; i < bytes; i++) {
+        if (pcm_le[i] != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void test_call_audio(void)
+{
+    uint8_t frame[AUDIO_FRAME_BYTES];
+    char line[CALL_AUDIO_LINE_MAX];
+    call_audio_stats_t st;
+
+    /* OFF: silence towards the phone, nothing towards the host, the level meter works. */
+    call_audio_init();
+    call_audio_link_open();
+    CHECK(call_audio_get_mode() == CALL_AUDIO_OFF);
+    for (size_t i = 0; i < AUDIO_FRAME_BYTES / 2; i++) {
+        pcm_put(frame, i, (int16_t)(i == 7 ? -12345 : 100));
+    }
+    call_audio_rx(frame, sizeof(frame), false);
+    memset(frame, 0x55, sizeof(frame));
+    call_audio_tx(frame, sizeof(frame));
+    CHECK(frame_is_silent(frame, sizeof(frame)));
+    CHECK(call_audio_host_out(line, sizeof(line)) == 0);
+    call_audio_get_stats(&st, true);
+    CHECK(st.link_open && st.rx_frames == 1 && st.tx_frames == 1 && st.rx_peak == 12345);
+    call_audio_get_stats(&st, false);
+    CHECK(st.rx_peak == 0);                                     /* the read restarted the meter */
+
+    /* A bad frame is counted and carries silence; -32768 does not overflow the meter. */
+    pcm_put(frame, 0, 30000);
+    call_audio_rx(frame, sizeof(frame), true);
+    pcm_put(frame, 0, -32768);
+    call_audio_rx(frame, sizeof(frame), false);
+    call_audio_get_stats(&st, true);
+    CHECK(st.rx_bad_frames == 1 && st.rx_peak == 32767);
+
+    /* TONE: 400 Hz beep, 0.5 s on and 0.5 s off, exact period of 20 samples. */
+    call_audio_set_mode(CALL_AUDIO_TONE);
+    CHECK(strcmp(call_audio_mode_name(call_audio_get_mode()), "tone") == 0);
+    static uint8_t second[2 * CALL_AUDIO_SAMPLE_RATE];
+    call_audio_tx(second, sizeof(second));
+    CHECK(pcm_get(second, 0) == 0 && pcm_get(second, 5) == 8000 && pcm_get(second, 15) == -8000);
+    CHECK(pcm_get(second, 20 * 100 + 5) == 8000);
+    CHECK(pcm_get(second, 3999) == -2472);
+    CHECK(frame_is_silent(second + 2 * 4000, sizeof(second) - 2 * 4000));
+    call_audio_tx(frame, sizeof(frame));                        /* the next second starts with the beep again */
+    CHECK(pcm_get(frame, 5) == 8000);
+
+    /* LOOP: the received audio comes back after CALL_AUDIO_LOOP_DELAY samples. */
+    call_audio_set_mode(CALL_AUDIO_LOOP);
+    int16_t next_rx = 1, next_tx = 1;
+    size_t sent = 0;
+    bool loop_ok = true;
+    for (int n = 0; n < 200; n++) {
+        for (size_t i = 0; i < AUDIO_FRAME_BYTES / 2; i++) {
+            pcm_put(frame, i, next_rx++);
+        }
+        call_audio_rx(frame, sizeof(frame), false);
+        call_audio_tx(frame, sizeof(frame));
+        sent += AUDIO_FRAME_BYTES / 2;
+        if (sent < CALL_AUDIO_LOOP_DELAY) {
+            loop_ok = loop_ok && frame_is_silent(frame, sizeof(frame));
+        } else {
+            for (size_t i = 0; i < AUDIO_FRAME_BYTES / 2; i++) {
+                loop_ok = loop_ok && pcm_get(frame, i) == next_tx++;
+            }
+        }
+    }
+    CHECK(loop_ok);
+    CHECK(next_tx > 1);
+    CHECK(next_rx - next_tx >= CALL_AUDIO_LOOP_DELAY - (int)(AUDIO_FRAME_BYTES / 2));
+    CHECK(next_rx - next_tx <= CALL_AUDIO_LOOP_DELAY);
+    call_audio_get_stats(&st, true);
+    CHECK(st.tx_underruns == 0 && st.tx_dropped == 0);
+
+    /* STREAM uplink: 160 samples from the phone make one "A <base64 mu-law>" line. */
+    call_audio_set_mode(CALL_AUDIO_STREAM);
+    CHECK(call_audio_host_out(line, sizeof(line)) == 0);
+    int16_t sample = 0;
+    for (int n = 0; n < 3; n++) {                               /* 180 samples */
+        for (size_t i = 0; i < AUDIO_FRAME_BYTES / 2; i++) {
+            pcm_put(frame, i, (int16_t)(sample++ * 64));
+        }
+        call_audio_rx(frame, sizeof(frame), false);
+    }
+    CHECK(call_audio_host_out(line, 10) == 0);                  /* buffer too small: nothing is lost */
+    size_t len = call_audio_host_out(line, sizeof(line));
+    CHECK(len == 2 + AUDIO_B64_ENCODED_LEN(CALL_AUDIO_FRAME_SAMPLES) && strlen(line) == len);
+    CHECK(line[0] == 'A' && line[1] == ' ');
+    uint8_t ulaw[CALL_AUDIO_FRAME_SAMPLES];
+    CHECK(audio_b64_decode(line + 2, ulaw, sizeof(ulaw)) == CALL_AUDIO_FRAME_SAMPLES);
+    bool uplink_ok = true;
+    for (int i = 0; i < CALL_AUDIO_FRAME_SAMPLES; i++) {
+        uplink_ok = uplink_ok && ulaw[i] == audio_ulaw_encode((int16_t)(i * 64));
+    }
+    CHECK(uplink_ok);
+    CHECK(call_audio_host_out(line, sizeof(line)) == 0);        /* 20 samples left: not a full frame */
+
+    /* STREAM downlink: played after the prefill, in order; silence and one underrun when it runs dry. */
+    call_audio_tx(frame, sizeof(frame));                        /* takes the flush of the mode change */
+    CHECK(frame_is_silent(frame, sizeof(frame)));
+    uint8_t tone_ulaw[CALL_AUDIO_FRAME_SAMPLES];
+    for (int i = 0; i < CALL_AUDIO_FRAME_SAMPLES; i++) {
+        tone_ulaw[i] = audio_ulaw_encode((int16_t)(1000 + i * 100));
+    }
+    char b64[AUDIO_B64_ENCODED_LEN(CALL_AUDIO_FRAME_SAMPLES) + 1];
+    CHECK(audio_b64_encode(tone_ulaw, sizeof(tone_ulaw), b64, sizeof(b64)) > 0);
+    for (int n = 0; n < 4; n++) {                               /* 640 samples: below the prefill */
+        CHECK(call_audio_host_in(b64));
+    }
+    call_audio_tx(frame, sizeof(frame));
+    CHECK(frame_is_silent(frame, sizeof(frame)));
+    CHECK(call_audio_host_in(b64));                             /* 800 samples: playback starts */
+    bool downlink_ok = true;
+    for (int i = 0; i < 5 * CALL_AUDIO_FRAME_SAMPLES; i += 2) {
+        call_audio_tx(frame, 4);                                /* two samples at a time */
+        downlink_ok = downlink_ok && pcm_get(frame, 0) == audio_ulaw_decode(tone_ulaw[i % CALL_AUDIO_FRAME_SAMPLES]);
+        downlink_ok = downlink_ok && pcm_get(frame, 1) == audio_ulaw_decode(tone_ulaw[(i + 1) % CALL_AUDIO_FRAME_SAMPLES]);
+    }
+    CHECK(downlink_ok);
+    call_audio_tx(frame, sizeof(frame));                        /* dry */
+    CHECK(frame_is_silent(frame, sizeof(frame)));
+    call_audio_get_stats(&st, false);
+    CHECK(st.tx_underruns == 1 && st.host_lines_in == 5 && st.host_lines_bad == 0 && st.host_lines_out == 1);
+    call_audio_tx(frame, sizeof(frame));                        /* still dry: not a second underrun */
+    call_audio_get_stats(&st, false);
+    CHECK(st.tx_underruns == 1);
+
+    /* Bad host lines are counted; a full TX ring drops the newest samples. */
+    CHECK(!call_audio_host_in("not base64!"));
+    CHECK(!call_audio_host_in(""));
+    for (int n = 0; n < 60; n++) {                              /* 9600 samples into a ring of 8192 */
+        call_audio_host_in(b64);
+    }
+    call_audio_get_stats(&st, false);
+    CHECK(st.host_lines_bad == 2 && st.tx_dropped == 9600 - 8192);
+
+    /* A slow host loses uplink audio, but the phone side never blocks. */
+    static uint8_t burst[2 * 5000];
+    call_audio_rx(burst, sizeof(burst), false);                 /* RX ring: 20 left + 5000 > 4096 */
+    call_audio_get_stats(&st, false);
+    CHECK(st.rx_dropped == 20 + 5000 - 4096);
+
+    /* Outside STREAM the host lines are accepted and ignored; link close is visible. */
+    call_audio_set_mode(CALL_AUDIO_OFF);
+    CHECK(call_audio_host_in(b64));
+    call_audio_tx(frame, sizeof(frame));
+    CHECK(frame_is_silent(frame, sizeof(frame)));
+    CHECK(call_audio_host_out(line, sizeof(line)) == 0);        /* the mode change emptied the RX ring */
+    call_audio_link_close();
+    call_audio_get_stats(&st, false);
+    CHECK(!st.link_open);
+}
+
 /* ---- input-record protocol ----------------------------------------------------------- */
 
 static void test_input_records(void)
@@ -468,6 +838,9 @@ int main(void)
 {
     test_parser();
     test_network_commands();
+    test_call_commands();
+    test_audio_codec();
+    test_call_audio();
     test_keymap();
     test_motion();
     test_input_records();

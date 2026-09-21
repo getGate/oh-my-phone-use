@@ -19,6 +19,7 @@ iPad Computer Use app ──HTTP over Wi-Fi──▶ ESP32 (same HID link)
 | --- | --- |
 | `main/`, `components/`, `partitions.csv`, `sdkconfig.defaults` | The ESP-IDF firmware |
 | `tools/control.py` | Serial control utility for the Mac |
+| `tools/call_audio.py`, `sdkconfig.hfp_test` | [HFP call audio test](#hfp-call-audio-test): phone calls through the board, call audio on the Mac |
 | `test/host/` | Host tests of the firmware logic (no hardware, no ESP-IDF) |
 | `ipad_computer_use/` | Vendored fork of [jamiepinheiro/ipad_computer_use](https://github.com/jamiepinheiro/ipad_computer_use) (MIT): iPad app, control server, calibration, MCP adapter |
 
@@ -50,7 +51,8 @@ copes with a Wi-Fi + BLE input tool. Its scripts find this firmware three direct
 12. [Configuration](#configuration)
 13. [Testing](#testing)
 14. [Known limitations](#known-limitations)
-15. [Planned HFP integration](#planned-hfp-integration)
+15. [HFP call audio test](#hfp-call-audio-test)
+16. [Planned HFP integration](#planned-hfp-integration)
 
 ## Requirements
 
@@ -214,6 +216,18 @@ case-insensitive.
 | `SECRET` | Input-device secret state | `SECRET configured=1 source=nvs` (`nvs`, `build` or `none`) |
 | `SECRET <value>` | Store the secret expected in `X-Input-Device-Secret` (1..128 printable ASCII characters, quote if it contains spaces) | `OK` |
 | `SECRET CLEAR` | Remove the stored secret (falls back to the build-time value, if any) | `OK` |
+| `CALL` | Phone call state (HFP builds) | `CALL slc=1 audio=cvsd call=1 setup=none held=0 number=10086 peer=aa:bb:cc:dd:ee:ff bonds=1` |
+| `DIAL <number>` | Place a call: up to 32 characters of `0-9 * # +` | `OK` |
+| `ANSWER` / `HANGUP` | Answer the incoming call / reject or end the call | `OK` |
+| `AUDIO` | Call audio state and counters; reading restarts the `peak` level meter | `AUDIO mode=stream link=1 rate=8000 rx=... rx_bad=... tx=... tx_underrun=... peak=1234` |
+| `AUDIO OFF\|TONE\|LOOP\|STREAM` | Call audio mode: silence, 400 Hz beep into the call, echo after 0.5 s, exchange audio with the host | `OK` |
+| `AUDIO CONNECT\|DISCONNECT` | Ask the phone to open / close the audio link | `OK` |
+| `A <base64>` | Call audio for the phone in `STREAM` mode: 8 kHz G.711 mu-law, 20 ms (160 bytes) per line | none |
+
+The call commands answer `ERR unsupported` in a build without `CONFIG_PHONEUSE_HFP_ENABLE`,
+and `ERR not_connected` while no phone has a hands-free connection. An HFP build also sends
+unsolicited lines: `EVT SLC|AUDIO|CALL|SETUP|HELD|RING|CLIP|PAIR|AT_ERROR ...` for link and
+call events, and `A <base64>` with the call audio from the phone in `STREAM` mode.
 
 Errors: `ERR invalid_command`, `ERR invalid_args`, `ERR not_connected`, `ERR send_failed`,
 `ERR unsupported_char` (nothing is typed), `ERR unknown_key`, `ERR too_many_keys`,
@@ -265,8 +279,12 @@ components/
   hid/hid_keymap.c                key names / ASCII -> HID usages, US layout (pure C)
   hid/hid_ble.c                   Bluetooth LE HID transport: report map, GAP security/advertising,
                                   esp_hidd device, connection tracking (the only file that knows esp_hid)
+  hid/hid_null.c                  transport of builds without Bluetooth HID (PHONEUSE_HID_ENABLE=n)
   hid/private/hid_transport.h     contract between hid_device.c and the transport
-  bt_stack/bt_stack.c             controller + Bluedroid host bring-up shared by HID and future HFP
+  bt_stack/bt_stack.c             controller + Bluedroid host bring-up shared by HID and HFP
+  hfp/hfp_client.c                Classic BT hands-free unit: pairing, call control, call events, audio callback
+  hfp/call_audio.c                call audio rings, tone / loop test modes, "A <base64>" host lines (pure C)
+  hfp/audio_codec.c               G.711 mu-law and base64 (pure C)
   input_tool/input_records.c      XIAO record protocol: hex decoding, validation, Arduino key codes (pure C)
   input_tool/input_player.c       plays a validated batch back through hid_* from its own task
   input_tool/input_http.c         esp_http_server front end: /, /status, /input, /stop, secret check
@@ -275,7 +293,8 @@ components/
   net/wifi_link.c                 Wi-Fi station, credentials in NVS, reconnect with backoff, hostname
   net/mdns_advert.c               phoneuse.local (_http._tcp, _phoneuse._tcp) via espressif/mdns
 tools/control.py                  macOS command-line client (pyserial), incl. wifi/secret provisioning
-test/host/                        host unit tests for parser, key map, motion splitting, record protocol
+tools/call_audio.py               call audio test tool: events, record, play, text-to-speech, ask + transcribe
+test/host/                        host unit tests for parser, key map, motion splitting, record protocol, call audio
 ipad_computer_use/                fork of the iPad app + control server + MCP adapter (Node/Swift)
 ```
 
@@ -318,7 +337,10 @@ task notifications.
 | `PHONEUSE_HID_REPORT_INTERVAL_MS` | 8 | Gap after every HID report (0 disables) |
 | `PHONEUSE_HID_MOUSE_MAX_STEP` | 127 | Largest per-report delta for `MOVE`; smaller = slower but more linear pointer travel under iOS acceleration |
 | `PHONEUSE_HID_BLE_MITM` | off | Numeric-comparison pairing instead of Just Works |
-| `PHONEUSE_BT_KEEP_CLASSIC` | off | Keep the Classic BT controller running (for HFP) |
+| `PHONEUSE_HID_ENABLE` | on | Bluetooth LE HID mouse + keyboard (off: HID commands answer `ERR not_connected`) |
+| `PHONEUSE_BT_KEEP_CLASSIC` | off | Keep the Classic BT controller running (selected by `PHONEUSE_HFP_ENABLE`) |
+| `PHONEUSE_HFP_ENABLE` | off | Hands-free unit: call commands and call audio (see [HFP call audio test](#hfp-call-audio-test)) |
+| `PHONEUSE_HFP_DEVICE_NAME` | `PhoneUse Audio` | Classic Bluetooth name shown on the iPhone |
 | `PHONEUSE_INPUT_TOOL_ENABLE` | on | Wi-Fi + HTTP input-tool protocol (off = serial-only BLE HID firmware) |
 | `PHONEUSE_INPUT_TOOL_HTTP_PORT` | 80 | HTTP port |
 | `PHONEUSE_INPUT_TOOL_SECRET` | empty | Build-time input-device secret; the `SECRET` command (NVS) overrides it |
@@ -343,10 +365,11 @@ Host tests (no hardware, no ESP-IDF):
 make -C test/host test
 ```
 
-They cover every serial command including error paths (with and without the network hooks),
-the key map, the movement splitter (exact sum, per-report bounds, straight-line steps, 20 000
-random cases) and the input-record protocol (hex decoding, the reference firmware's validation
-cases, Arduino key-code translation).
+They cover every serial command including error paths (with and without the network and call
+hooks), the key map, the movement splitter (exact sum, per-report bounds, straight-line steps,
+20 000 random cases), the input-record protocol (hex decoding, the reference firmware's
+validation cases, Arduino key-code translation) and the call audio (G.711 mu-law and base64
+codecs, the rings, the tone / loop / stream modes, host audio lines, overflow and underrun).
 
 Hardware acceptance test (requires the board, an iPhone and a Wi-Fi network):
 
@@ -389,7 +412,68 @@ Hardware acceptance test (requires the board, an iPhone and a Wi-Fi network):
   (see the fork's `SECURITY.md`).
 - Serial commands and HTTP batches can run at the same time; they interleave at the HID layer.
 
+## HFP call audio test
+
+A separate build configuration, `sdkconfig.hfp_test`, turns the board into a Bluetooth Classic
+hands-free unit (a car kit) for the iPhone and nothing else: Bluetooth LE HID and the Wi-Fi
+input tool are off, so the test isolates the question "can the call audio reach the host, in
+both directions?". You place or answer the call by hand on the phone.
+
+```
+iPhone ──Classic BT HFP (CVSD, 8 kHz)──▶ ESP32 ──USB serial, 230400 baud──▶ tools/call_audio.py
+```
+
+Build and flash into a second build directory (the normal `build/` stays untouched):
+
+```bash
+idf.py -B build_hfp -D SDKCONFIG=build_hfp/sdkconfig \
+       -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.hfp_test" build
+idf.py -B build_hfp -p /dev/cu.usbserial-XXXXX -b 230400 flash
+```
+
+Test steps (`-b 230400` for `tools/control.py`; `tools/call_audio.py` uses it by default):
+
+1. iPhone: **Settings → Bluetooth**, tap **PhoneUse Audio** under *Other Devices* and confirm.
+   `python3 tools/call_audio.py status` → `CALL slc=1 ...`. After a reset the board connects
+   to the bonded phone by itself within 15 s.
+2. iPhone: **Settings → Accessibility → Touch → Call Audio Routing → Bluetooth Headset**, so
+   every call uses the board. (Or pick *PhoneUse Audio* with the audio button during a call.)
+3. Start `python3 tools/call_audio.py monitor` and place a call on the phone. Expect
+   `EVT SETUP state=dialing`, `EVT AUDIO state=connected frame=...`, `EVT CALL active=1`.
+4. **Board → far end:** `python3 tools/call_audio.py tone` – the other party hears a beep,
+   0.5 s on and 0.5 s off. `AUDIO` shows `tx` counting and `tx_fail=0`.
+5. **Far end → board → far end:** `python3 tools/call_audio.py loop` – the other party hears
+   their own voice 0.5 s late. `peak` in `AUDIO` follows the loudness of the far end.
+6. **Far end → host:** `python3 tools/call_audio.py record call.wav -s 20`, then
+   `afplay call.wav`. The level meter moves while the other party talks.
+7. **Host → far end:** `python3 tools/call_audio.py say "Hello, this is the computer."`
+   (macOS text-to-speech), or `play file.wav` with any 16-bit PCM WAV file.
+8. `python3 tools/call_audio.py hangup` ends the call; `dial <number>` and `answer` work too.
+
+`python3 tools/call_audio.py selftest` runs steps 4, 5 and 7 in one pass during a call (6 s
+beep, 10 s echo, a spoken count to five), so the other party only has to listen.
+
+`python3 tools/call_audio.py ask "<question>" --voice Tingting --closing "<goodbye>"` is one
+question-and-answer turn, the building block for an agent: it waits until a call is active,
+speaks the question (macOS text-to-speech) and a beep, records the answer until the other party
+stops talking, speaks the closing text, releases the audio link (the iPhone takes the call audio
+back) and prints two transcripts. `TRANSCRIPT_CALL` is everything the other party said from the
+start of the call to the end of the answer (the answer is its last part); `TRANSCRIPT_CLIP` is
+the answer recording alone, which whisper often gets wrong when the answer is only a few words,
+because it lacks the context of the rest of the call.
+Speech-to-text runs on the Mac with whisper.cpp (`brew install whisper-cpp`, `ffmpeg`, and a
+ggml model in `~/.cache/phoneuse/models/`). The spoken text should say that an AI is speaking
+and that the answer is recorded.
+
+`AUDIO` counters to watch: `rx_bad` (packets the baseband marked bad), `rx_drop` / `tx_drop`
+(a ring overflowed: the host is too slow or sends faster than real time), `tx_underrun` (the
+host stream ran dry), `host_bad` (corrupt serial lines). The audio path is CVSD only; wide
+band speech (mSBC) is disabled in `sdkconfig.hfp_test`.
+
 ## Planned HFP integration
+
+The [HFP call audio test](#hfp-call-audio-test) covers the hands-free unit on its own. Running
+it next to BLE HID and Wi-Fi is the open part:
 
 Phase 2 adds Bluetooth Classic HFP (phone audio):
 

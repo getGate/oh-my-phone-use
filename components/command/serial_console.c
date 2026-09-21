@@ -57,6 +57,16 @@ static int console_log_vprintf(const char *fmt, va_list ap)
     return n;
 }
 
+void serial_console_write_line(const char *line)
+{
+    /* One driver call per line: uart_write_bytes() is atomic, so lines of other tasks cannot split it. */
+    char out[COMMAND_RESPONSE_MAX + 1];
+    size_t n = strnlen(line, COMMAND_RESPONSE_MAX);
+    memcpy(out, line, n);
+    out[n++] = '\n';
+    uart_write_bytes(CONSOLE_UART, out, n);
+}
+
 static void handle_line(const char *line)
 {
     char response[COMMAND_RESPONSE_MAX + 1];

@@ -1,9 +1,9 @@
 menu "PhoneUse: Bluetooth stack"
 
     config PHONEUSE_BT_KEEP_CLASSIC
-        bool "Keep the Classic BT (BR/EDR) controller running (needed for HFP later)"
+        bool "Keep the Classic BT (BR/EDR) controller running (needed for HFP)"
         default n
-        depends on BTDM_CTRL_MODE_BTDM
+        depends on BTDM_CTRL_MODE_BTDM || BTDM_CTRL_MODE_BR_EDR_ONLY
         help
             Off: the Classic BT controller memory is released at boot and the controller
             runs BLE-only (more free RAM, fewer moving parts) - the right choice while only
@@ -11,5 +11,8 @@ menu "PhoneUse: Bluetooth stack"
             On: the controller runs in dual mode so a Classic BT profile such as HFP can be
             started next to BLE HID. Also enable CONFIG_BT_CLASSIC_ENABLED and the profile's
             own options; coexistence of BLE HID and HFP has not been validated yet.
+            On with CONFIG_BT_BLE_ENABLED=n: the controller runs Classic BT only and the BLE
+            controller memory is released (the HFP call audio test, see sdkconfig.hfp_test).
+            PHONEUSE_HFP_ENABLE selects this option.
 
 endmenu
