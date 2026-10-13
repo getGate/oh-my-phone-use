@@ -122,7 +122,7 @@ the task needs.
    Without a SIM (FaceTime test), the user connects the call by hand and selects
    **Oh My Phone Use Audio**; then use `attach: true` and omit `phone_number`.
 3. `phone_turn` speaks `text` and returns the other party's reply as `turn.remote`:
-   - The first turn says you are an AI assistant calling for the user, why you call, and that
+   - The first turn introduces you as “Leo’s agent”, says why you call, and explains that
      replies are transcribed for the user.
    - Keep each turn to one or two short sentences, in the other party's language.
    - Every transcript may be wrong (`uncertain` is always set), especially one-word answers.

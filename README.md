@@ -25,6 +25,28 @@ Agent (Claude, …) ──MCP──▶ MCP server ─┬─▶ control server �
                                                      (mouse + keyboard, hands-free calls)
 ```
 
+## Use case 1: Let an agent control your phone
+
+Let your agent see your phone's screen, tap, type and scroll to carry out tasks
+in its apps. The example below shows Codex using the Oh My Phone Use skill to
+send a dinner invitation through the iPhone's Messages app.
+
+![Codex sending a dinner invitation to John, alongside the iPhone showing the sent message and the ESP32 board](docs/images/use-case-1-text-john.png)
+
+*The images are combined for presentation, with the agent's sidebar history removed.*
+
+## Use case 2: Let an agent make phone calls
+
+Give your agent a phone number and a task. It can call through your iPhone,
+speak and listen on your behalf, while you follow the conversation on the live
+listening page. The example below shows a call asking John what time he gets
+off work, with the iPhone routing call audio through the ESP32.
+
+![Codex placing a call alongside the live listening page and an iPhone using Oh My Phone Use Audio](docs/images/use-case-2-phone-call.png)
+
+*The images are combined for presentation, with the phone number and personal
+details hidden. The screenshot shows a call in progress; transcripts may be inaccurate.*
+
 ## Status
 
 The repository structure and APIs are currently unstable and may change without
@@ -104,7 +126,8 @@ the current board, as described in [Status](#status).
 
 The MCP server and the control server have no authentication: keep them on loopback or a
 private network ([SECURITY.md](SECURITY.md)). A call reaches a real person: the skill makes the
-agent dial only numbers you gave it, say that it is an AI, and confirm what it heard.
+agent dial only numbers you gave it, introduce itself as Leo’s agent, explain that replies
+are transcribed for you, and confirm what it heard.
 
 ## Repository layout
 
