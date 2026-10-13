@@ -26,9 +26,11 @@ input device and server, not the real iPad.
 ## Build and install
 
 Use macOS with full Xcode and its command-line tools. The project targets iPad
-and iPhone, with a deployment target of iOS/iPadOS 17. Physical testing has used
-an M-series iPad on iPadOS 26 and an iPhone 17 Pro. Support on older OS versions
-is not physically verified. The app is shown as Oh My Phone Use.
+and iPhone, with a minimum deployment target of **iOS/iPadOS 17**. Physical testing
+has used an M-series iPad on iPadOS 26 and an iPhone 17 Pro. The deployment target
+does not mean every supported OS version has been physically verified; older supported
+OS versions remain unverified on hardware. The Control Center control requires
+iOS/iPadOS 18 or later. The app is shown as Oh My Phone Use.
 
 From the repository root:
 
@@ -159,8 +161,16 @@ appearances. See [icon editing and previews](ICONS.md).
 bash ios/scripts/test_relay.sh
 bash ios/scripts/test_frames.sh
 bash ios/scripts/test_setup.sh
+bash ios/scripts/test_session_launch.sh
+bash ios/scripts/test_calibration_click.sh
 ```
 
-These require macOS Swift tooling. The relay harness connects to temporary
-loopback servers and verifies session authorization, forwarding, cancellation,
-and confirmed input release. No user account or physical USB input is used.
+Run these from the repository root after `npm ci --prefix host/control_server`.
+The Swift harness scripts require an Apple Silicon Mac running macOS 14 or later,
+Xcode command-line tools and Node.js 20+; the relay, frame, setup and session-launch
+scripts compile for `arm64-apple-macosx14.0`. Intel Macs are not supported by those
+scripts as written. The relay harness connects to temporary loopback servers and
+verifies session authorization, forwarding, cancellation and confirmed input release.
+The other harnesses check fresh-frame selection, setup status, the Start Session
+intent hand-off and calibration click policy. No phone, board or signing credentials
+are required. These tests do not build the full iOS app or verify its UI on a device.
