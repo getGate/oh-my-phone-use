@@ -110,7 +110,7 @@ static esp_err_t status_get(httpd_req_t *req)
                ? "Waiting for the paired phone to reconnect over Bluetooth (Settings > Bluetooth > " CONFIG_PHONEUSE_HID_DEVICE_NAME ")"
                : "Pair \"" CONFIG_PHONEUSE_HID_DEVICE_NAME "\" in Settings > Bluetooth (on an iPhone, also enable AssistiveTouch)";
     } else if (!secret) {
-        hint = "Input-device secret not set on the ESP32: run input_device/scripts/esp32_provision.sh (serial command SECRET)";
+        hint = "Input-device secret not set on the ESP32: run tools/provision.sh (serial command SECRET)";
     }
 
     char hint_json[320] = "";

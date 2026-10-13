@@ -13,7 +13,7 @@ Examples:
     python3 tools/control.py wifi "My Network" "pass"  # store credentials and connect
     python3 tools/control.py wifi clear
     python3 tools/control.py secret                    # is the input-device secret configured?
-    python3 tools/control.py secret --file ipad_computer_use/control_server/.state/input_device_secret
+    python3 tools/control.py secret --file control_server/.state/input_device_secret
     python3 tools/control.py secret clear
     python3 tools/control.py -p /dev/cu.usbserial-XXXXX ping
     python3 tools/control.py repl          # interactive session, one command per line

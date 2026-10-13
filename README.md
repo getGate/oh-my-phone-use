@@ -4,36 +4,36 @@ ESP32-PICO-KIT-1 firmware that turns the board into a Bluetooth Low Energy mouse
 an iPhone or iPad. It can be driven two ways:
 
 1. **Serial commands** from a Mac over the board's USB serial port (`tools/control.py`), and
-2. **The [iPad Computer Use](ipad_computer_use/README.md) input-tool protocol over Wi-Fi**: the
-   board replaces the Seeed XIAO RP2040 USB dongle of that project, so its iPad app, control
-   server, pointer calibration and MCP adapter work with an ESP32-PICO-KIT.
+2. **Screen control for agents**: an iPad/iPhone app shares the screen with a control server,
+   which exposes it to agents over MCP; the agent's keyboard and mouse actions reach the phone
+   through the board ([details](#screen-control-with-the-app-and-mcp)).
 
 ```
 Mac ──USB serial──▶ ESP32-PICO-KIT-1 ──Bluetooth LE HID──▶ iPhone / iPad (AssistiveTouch)
-iPad Computer Use app ──HTTP over Wi-Fi──▶ ESP32 (same HID link)
+Agent ──MCP──▶ control_server ◀──WebSocket── iPad app ──HTTP over Wi-Fi──▶ ESP32 (same HID link)
 ```
+
+The screen-control design, the iPad app and the control server come from
+[jamiepinheiro/ipad_computer_use](https://github.com/jamiepinheiro/ipad_computer_use) (MIT),
+where a USB Seeed XIAO RP2040 is the input tool. PhoneUse replaces that dongle with the
+ESP32 (Bluetooth LE HID + Wi-Fi) and keeps only the parts it needs; see
+[THIRD_PARTY.md](THIRD_PARTY.md) for the license and the list of derived files.
 
 ## Repository layout
 
 | Path | What |
 | --- | --- |
 | `main/`, `components/`, `partitions.csv`, `sdkconfig.defaults` | The ESP-IDF firmware |
-| `tools/control.py` | Serial control utility for the Mac |
+| `tools/control.py`, `tools/provision.sh` | Serial control utility for the Mac; storing the Wi-Fi credentials and input-device secret on the board |
 | `tools/call_audio.py`, `sdkconfig.hfp_test` | [HFP call audio test](#hfp-call-audio-test): phone calls through the board, call audio on the Mac |
-| `test/host/` | Host tests of the firmware logic (no hardware, no ESP-IDF) |
-| `ipad_computer_use/` | Vendored fork of [jamiepinheiro/ipad_computer_use](https://github.com/jamiepinheiro/ipad_computer_use) (MIT): iPad app, control server, calibration, MCP adapter |
+| `tools/phone_service.py` | [Agent phone service](#agent-phone-service-first-version): MCP server for phone calls |
+| `ipad_app/` | iPad/iPhone app: screen sharing (ReplayKit), sessions, pointer calibration, forwards input to the board |
+| `control_server/` | Node.js control server, pointer calibration and MCP adapter for screen control |
+| `docs/input_protocol.md` | HTTP input-tool protocol between the app and the board |
+| `test/host/`, `test/phone/` | Host tests of the firmware logic and of the phone service (no hardware) |
 
-The fork is vendored as plain files. The tag `upstream-ac07704` marks the commit that holds the
-pristine upstream snapshot (upstream commit `ac07704`, without the Xcode build output upstream
-committed under `ipad_app/build_iphone/`), so every change made here is visible with:
-
-```bash
-git diff upstream-ac07704 -- ipad_computer_use
-```
-
-The fork adds ESP32 support to the iPad app, scripts and docs, and a pointer calibration that
-copes with a Wi-Fi + BLE input tool. Its scripts find this firmware three directories up
-(`PHONEUSE_FIRMWARE_DIR` overrides that), which is why both live in one repository.
+The tag `upstream-ac07704` marks the commit that imported the upstream snapshot (upstream commit
+`ac07704`, without its build output and demo media).
 
 ## Contents
 
@@ -43,7 +43,7 @@ copes with a Wi-Fi + BLE input tool. Its scripts find this firmware three direct
 4. [Identify the serial port on macOS](#identify-the-serial-port-on-macos)
 5. [Pair the ESP32 with an iPhone](#pair-the-esp32-with-an-iphone)
 6. [Enable AssistiveTouch](#enable-assistivetouch)
-7. [Using it with iPad Computer Use](#using-it-with-ipad-computer-use)
+7. [Screen control with the app and MCP](#screen-control-with-the-app-and-mcp)
 8. [Control utility](#control-utility)
 9. [Serial protocol](#serial-protocol)
 10. [HTTP input-tool API](#http-input-tool-api)
@@ -53,6 +53,8 @@ copes with a Wi-Fi + BLE input tool. Its scripts find this firmware three direct
 14. [Known limitations](#known-limitations)
 15. [HFP call audio test](#hfp-call-audio-test)
 16. [Planned HFP integration](#planned-hfp-integration)
+17. [Agent phone service](#agent-phone-service-first-version)
+18. [License](#license)
 
 ## Requirements
 
@@ -63,7 +65,7 @@ copes with a Wi-Fi + BLE input tool. Its scripts find this firmware three direct
 | Python for ESP-IDF | 3.10 or newer (ESP-IDF v6.1 requirement) |
 | Host tools | macOS, Python 3 with `pyserial` (`python3 -m pip install -r tools/requirements.txt`) |
 | iPhone / iPad | iOS 13 or newer (pointer support); tested target is current iOS |
-| For iPad Computer Use | Node.js 20+, Xcode (see `ipad_computer_use/README.md`) |
+| For screen control | Node.js 20+, macOS with Xcode and an Apple signing team (see [Screen control](#screen-control-with-the-app-and-mcp)) |
 
 Install ESP-IDF v6.1 if you do not have it. macOS ships Python 3.9, which ESP-IDF v6.1 rejects,
 so put a newer Python first on `PATH` before running `install.sh` and `export.sh`
@@ -127,8 +129,8 @@ otherwise pass `-p PORT` or set `PHONEUSE_PORT=/dev/cu.usbserial-XXXXX`.
 
 iPhone only. An iPad drives a Bluetooth mouse with its own pointer, so leave AssistiveTouch off
 there. With it on, clicks reach apps as finger taps; on the iPad tested, the move that followed a
-click was then not reported as a pointer position, which the iPad Computer Use pointer calibration
-has to work around (see `ipad_computer_use/control_server/calibration/README.md`).
+click was then not reported as a pointer position, which the pointer calibration
+has to work around (see `control_server/calibration/README.md`).
 
 1. **Settings → Accessibility → Touch → AssistiveTouch → On.**
 2. With the ESP32 connected a round pointer appears on screen. Under *Pointer Devices* in the same
@@ -139,26 +141,66 @@ has to work around (see `ipad_computer_use/control_server/calibration/README.md`
 3. Because the ESP32 also presents a keyboard, iOS hides the on-screen keyboard while it is
    connected. Enable **Show Onscreen Keyboard** in the AssistiveTouch settings if you want to keep it.
 
-## Using it with iPad Computer Use
+## Screen control with the app and MCP
 
-The [fork in `ipad_computer_use/`](ipad_computer_use/README.md#esp32-pico-kit-input-tool) has
-the full walkthrough. In short, after building and flashing this firmware:
-
-```bash
-cd ipad_computer_use && npm ci
-npm run start:background --workspace control_server        # creates .state/input_device_secret
-bash input_device/scripts/esp32_provision.sh /dev/cu.usbserial-XXXXX "Wi-Fi SSID" "password"
+```
+Agent ──MCP (127.0.0.1:8780)──▶ control_server ◀──WebSocket (8765)── ipad_app ──HTTP over Wi-Fi──▶ ESP32
+                                                                         │                          │
+                                                               ReplayKit screen frames    Bluetooth LE HID
+                                                                         └──────── iPad / iPhone ◀──┘
 ```
 
-The provisioning script stores the control server's input-device secret and the Wi-Fi
-credentials on the board (`SECRET` / `WIFI` serial commands) and prints the board's IP address.
-Pair the phone over Bluetooth, build and install the iPad app, and enter
-`http://phoneuse.local` (or `http://<ip>`) as the input tool address in its first setup step.
-From then on the app, calibration, `control_server/client.js` and the MCP adapter drive the
-phone through the ESP32 exactly as they would through the XIAO.
+The app on the phone opens an outbound WebSocket to the control server, sends fresh screen frames
+on request and forwards the encoded input records to the board, which plays them back as
+Bluetooth mouse and keyboard input. Requirements: Node.js 20+ for the control server; macOS with
+full Xcode and an Apple signing team for the app.
 
-The firmware speaks the protocol on every network interface from boot; it just has no address
-until the Wi-Fi link is up. `python3 tools/control.py wifi` shows the link state, IP and
+1. **Firmware**: build and flash it ([Build and flash](#build-and-flash)), pair the phone
+   ([Pair the ESP32](#pair-the-esp32-with-an-iphone)) and, on an iPhone, enable
+   [AssistiveTouch](#enable-assistivetouch).
+2. **Control server** (creates `control_server/.state/input_device_secret` on first start):
+
+   ```bash
+   npm ci --prefix control_server
+   npm run start:background --prefix control_server         # device connection, port 8765
+   npm run calibration:background --prefix control_server   # pointer calibration, port 8766
+   npm run mcp:background --prefix control_server           # MCP adapter, http://127.0.0.1:8780/mcp
+   ```
+
+3. **Provision the board** with that secret and the Wi-Fi network the phone uses; the script
+   prints the board's IP address and `phoneuse.local` name:
+
+   ```bash
+   bash tools/provision.sh /dev/cu.usbserial-XXXXX "Wi-Fi SSID" "password"
+   ```
+
+4. **Install the app** ([details](ipad_app/README.md)): copy `ipad_app/.signing.env.example` to
+   `ipad_app/.signing.env`, set your team ID and a unique bundle ID, then
+
+   ```bash
+   bash ipad_app/scripts/build.sh -allowProvisioningUpdates
+   xcrun devicectl list devices
+   bash ipad_app/scripts/install.sh YOUR_DEVICE_ID
+   ```
+
+5. **Set up the app**: enter `http://phoneuse.local` (or `http://<ip>`) as the input tool
+   address, `ws://YOUR_MAC_IP:8765/device` as the control server, and run the pointer
+   calibration. Then tap **Start Session** and confirm **Start Broadcast**.
+6. **Try it** from the Mac, then connect an agent to `http://127.0.0.1:8780/mcp`:
+
+   ```bash
+   node control_server/client.js status
+   node control_server/client.js screen      # saved under control_server/.state/
+   node control_server/client.js send 'hello'
+   ```
+
+The MCP tools, action shapes, hosting options and the wire protocol are described in
+[control_server/README.md](control_server/README.md). The control server and MCP adapter have no
+authentication by design: keep them on a trusted network or a private transport such as
+Tailscale, see [SECURITY.md](SECURITY.md).
+
+The firmware speaks the input protocol on every network interface from boot; it just has no
+address until the Wi-Fi link is up. `python3 tools/control.py wifi` shows the link state, IP and
 hostname; `status` includes `wifi=`, `ip=` and the playback state.
 
 ## Control utility
@@ -180,7 +222,7 @@ python3 tools/control.py wifi                 # WIFI configured=1 connected=1 ss
 python3 tools/control.py wifi "My Network" "password"   # store credentials (NVS) and connect
 python3 tools/control.py wifi clear
 python3 tools/control.py secret               # SECRET configured=1 source=nvs
-python3 tools/control.py secret --file ipad_computer_use/control_server/.state/input_device_secret
+python3 tools/control.py secret --file control_server/.state/input_device_secret
 python3 tools/control.py secret clear
 python3 tools/control.py -p /dev/cu.usbserial-XXXXX status
 python3 tools/control.py -v type hi           # -v shows firmware log lines on stderr
@@ -241,7 +283,7 @@ word and never interleave with a response mid-line, so a host can simply skip th
 
 Port 80 (`CONFIG_PHONEUSE_INPUT_TOOL_HTTP_PORT`), reachable as `http://phoneuse.local` (mDNS)
 or by IP once the Wi-Fi link is up. It is the protocol documented in
-[`ipad_computer_use/input_device/PROTOCOL.md`](ipad_computer_use/input_device/PROTOCOL.md):
+[`docs/input_protocol.md`](docs/input_protocol.md):
 
 | Route | Behaviour |
 | --- | --- |
@@ -261,9 +303,9 @@ Quick check from any host on the network (with the phone connected over Bluetoot
 ```bash
 curl -s http://phoneuse.local/status
 curl -s -o /dev/null -w "%{http_code}\n" -X POST http://phoneuse.local/input \
-  -H "X-Input-Device-Secret: $(cat ipad_computer_use/control_server/.state/input_device_secret)" \
-  --data-binary "$(node ipad_computer_use/input_device/scripts/encode_actions.js '[{"type":"move","dx":50,"dy":0}]')"
-INPUT_DEVICE_URL=http://phoneuse.local python3 ipad_computer_use/input_device/scripts/check_device.py
+  -H "X-Input-Device-Secret: $(cat control_server/.state/input_device_secret)" \
+  --data-binary "$(node control_server/scripts/encode_actions.js '[{"type":"move","dx":50,"dy":0}]')"
+INPUT_DEVICE_URL=http://phoneuse.local python3 tools/check_device.py
 ```
 
 ## Architecture
@@ -295,7 +337,8 @@ components/
 tools/control.py                  macOS command-line client (pyserial), incl. wifi/secret provisioning
 tools/call_audio.py               call audio test tool: events, record, play, text-to-speech, ask + transcribe
 test/host/                        host unit tests for parser, key map, motion splitting, record protocol, call audio
-ipad_computer_use/                fork of the iPad app + control server + MCP adapter (Node/Swift)
+ipad_app/                         iPad/iPhone app: screen sharing, sessions, calibration (Swift)
+control_server/                   control server, calibration, MCP adapter, input codec (Node)
 ```
 
 Data flow: `serial_console` task reads a line → `command_parser_execute()` → `hid_*()`, and
@@ -371,6 +414,15 @@ hooks), the key map, the movement splitter (exact sum, per-report bounds, straig
 validation cases, Arduino key-code translation) and the call audio (G.711 mu-law and base64
 codecs, the rings, the tone / loop / stream modes, host audio lines, overflow and underrun).
 
+Screen control (simulated device and server, no hardware):
+
+```bash
+npm test --prefix control_server        # control server, calibration, MCP adapter, input codec
+bash ipad_app/scripts/test_relay.sh     # app relay against the control server (needs Xcode)
+bash ipad_app/scripts/test_frames.sh
+bash ipad_app/scripts/test_setup.sh
+```
+
 Hardware acceptance test (requires the board, an iPhone and a Wi-Fi network):
 
 1. `idf.py -p PORT -b 230400 flash monitor` – the log ends with `PhoneUse ready: BLE HID ...`.
@@ -384,8 +436,8 @@ Hardware acceptance test (requires the board, an iPhone and a Wi-Fi network):
    - `python3 tools/control.py key ENTER` → new line
 4. `python3 tools/control.py wifi "SSID" "password"` then `wifi` → `connected=1 ip=...`;
    `curl http://phoneuse.local/status` from the Mac shows `"hidReady":true`.
-5. `python3 tools/control.py secret --file ipad_computer_use/control_server/.state/input_device_secret`,
-   then `INPUT_DEVICE_URL=http://phoneuse.local python3 ipad_computer_use/input_device/scripts/check_device.py`
+5. `python3 tools/control.py secret --file control_server/.state/input_device_secret`,
+   then `INPUT_DEVICE_URL=http://phoneuse.local python3 tools/check_device.py`
    → `PASS`.
 6. Reset the board (EN button): the iPhone reconnects and the Wi-Fi link comes back within a few
    seconds; `status` shows `connected=1 wifi=1` again and `uptime` restarts from zero.
@@ -395,7 +447,7 @@ Hardware acceptance test (requires the board, an iPhone and a Wi-Fi network):
 ## Known limitations
 
 - Relative pointer only. iOS applies pointer acceleration to every report, so the distance moved
-  on screen is not exactly `dx`/`dy` pixels; iPad Computer Use's pointer calibration measures
+  on screen is not exactly `dx`/`dy` pixels; the app's pointer calibration measures
   this, the serial commands do not.
 - Text is limited to ASCII on a US keyboard layout; set the iPhone hardware keyboard layout to
   U.S. Unsupported characters are rejected before anything is typed.
@@ -409,7 +461,7 @@ Hardware acceptance test (requires the board, an iPhone and a Wi-Fi network):
   network. There is no SoftAP fallback and no captive-portal provisioning; credentials go in
   over the serial port. SSIDs and passwords must be printable ASCII.
 - The HTTP API is plaintext and protected only by the shared secret; keep the network private
-  (see the fork's `SECURITY.md`).
+  (see [SECURITY.md](SECURITY.md)).
 - Serial commands and HTTP batches can run at the same time; they interleave at the HID layer.
 
 ## HFP call audio test
@@ -626,3 +678,9 @@ synthesis, spoken audio duration, playback, listening, first detected speech rel
 transcription and total tool time. `finished_at` makes agent/orchestrator delays distinguishable
 from service latency. Same-text offline synthesis/recognition benchmarks
 are not substitutes for a timed real conversation.
+
+## License
+
+[MIT](LICENSE). `ipad_app/` and `control_server/` contain code from
+[jamiepinheiro/ipad_computer_use](https://github.com/jamiepinheiro/ipad_computer_use), also
+MIT; its copyright notice is kept in [THIRD_PARTY.md](THIRD_PARTY.md).

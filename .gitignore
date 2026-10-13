@@ -13,10 +13,20 @@ __pycache__/
 # macOS
 .DS_Store
 
-# Local copy of the upstream git metadata of ipad_computer_use/ (see README, "Repository layout")
-.upstream/
-# Xcode build output that upstream committed by accident; not source
-ipad_computer_use/ipad_app/build_iphone/
+# Node (control_server/)
+node_modules/
+
+# iOS app signing and Xcode user state (ipad_app/)
+.signing.env
+xcuserdata/
+*.xcuserstate
+*.mobileprovision
+*.p12
+*.p8
+*.pem
+.env
+.env.*
+!.env.example
 
 # HFP call audio test build (README, "HFP call audio test")
 build_hfp/

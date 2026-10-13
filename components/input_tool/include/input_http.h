@@ -1,6 +1,6 @@
 /*
  * HTTP front end implementing the iPad Computer Use input-device protocol
- * (input_device/PROTOCOL.md of that project):
+ * (docs/input_protocol.md):
  *
  *   GET  /        device description
  *   GET  /status  {"device","transport","running","state","waitMs","hidReady","reports",...}
