@@ -2,15 +2,15 @@
 
 The protocol of the input tool of
 [jamiepinheiro/ipad_computer_use](https://github.com/jamiepinheiro/ipad_computer_use),
-implemented by this firmware (`components/input_tool/`) so that the iPad app and
+implemented by this firmware (`firmware/components/input_tool/`) so that the iPad app and
 the control server work with the board. Base URL: the address saved in the iPad
 app (`http://phoneuse.local` or `http://<ip>`, transport: Wi-Fi). The upstream
 USB XIAO RP2040 tool (`http://172.31.254.1`) implements the same routes, records,
 limits and status codes.
 `GET /status` returns non-sensitive readiness state. Mutating requests require
 the `X-Input-Device-Secret` header: the value stored in
-`control_server/.state/input_device_secret` (or `INPUT_DEVICE_SECRET`), which
-`tools/provision.sh` writes to the board's NVS.
+`host/control_server/.state/input_device_secret` (or `INPUT_DEVICE_SECRET`), which
+`host/tools/provision.sh` writes to the board's NVS.
 
 | Route | Behavior |
 | --- | --- |
@@ -51,7 +51,7 @@ Unplug the tool when input release cannot be confirmed.
 The protocol carries relative HID counts, not screenshot coordinates. Neither
 the firmware nor its codec knows the current iPad pointer position.
 
-## PhoneUse firmware specifics
+## Oh My Phone Use firmware specifics
 
 - `hidReady` is true only while a phone is connected over Bluetooth LE. While it
   is false, `POST /input` returns 409 with an explanatory `error`.

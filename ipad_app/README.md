@@ -3,7 +3,7 @@
 The native client for the control server. It owns user consent, ReplayKit screen
 capture, session lifecycle, the native calibration surface, and the optional
 session Live Activity. It forwards encoded input to the input tool over HTTP:
-the PhoneUse ESP32 board on the local Wi-Fi network (address entered in the
+the Oh My Phone Use ESP32 board on the local Wi-Fi network (address entered in the
 app, `http://phoneuse.local`). It does not contain an agent or run the control
 server. The app is derived from
 [jamiepinheiro/ipad_computer_use](https://github.com/jamiepinheiro/ipad_computer_use)
@@ -28,7 +28,7 @@ input device and server, not the real iPad.
 Use macOS with full Xcode and its command-line tools. The project targets iPad
 and iPhone, with a deployment target of iOS/iPadOS 17. Physical testing has used
 an M-series iPad on iPadOS 26 and an iPhone 17 Pro. Support on older OS versions
-is not physically verified. The app name remains iPad Computer Use.
+is not physically verified. The app is shown as Oh My Phone Use.
 
 From the repository root:
 
@@ -48,7 +48,7 @@ bash ipad_app/scripts/install.sh YOUR_IPAD_DEVICE_ID
 ```
 
 For iPhone, substitute its device ID in the install command. Before calibration,
-follow [Enable AssistiveTouch](../README.md#enable-assistivetouch) and map the
+follow [Enable AssistiveTouch](../firmware/README.md#enable-assistivetouch) and map the
 input tool's Button 1 to Single-Tap.
 
 Pair and trust the device, enable Developer Mode, and keep it unlocked during
@@ -61,7 +61,7 @@ run these commands. Build output is in this component's ignored `build/` folder.
 First launch presents three required setup steps: attach the input tool, enter
 and verify the control server URL, then run pointer calibration. The first step
 also takes the input tool address: enter `http://phoneuse.local` /
-`http://<ip>` for the PhoneUse board (pair it in Settings > Bluetooth first), or
+`http://<ip>` for the Oh My Phone Use board (pair it in Settings > Bluetooth first), or
 leave it empty for a USB XIAO. The address is saved with the server address in the
 shared keychain item so the broadcast extension uses the same tool, and can be
 changed later under **Edit Input Tool** on the main page (ending any active
@@ -75,7 +75,7 @@ is saved only after calibration succeeds; closing or stopping it allows retry.
 Existing installations without a saved setup-completion flag also see this flow,
 with their existing server address prefilled.
 
-1. Bring the paired PhoneUse board onto the same Wi-Fi network (or attach a USB XIAO) and keep the iPad's Wi-Fi connection.
+1. Bring the paired Oh My Phone Use board onto the same Wi-Fi network (or attach a USB XIAO) and keep the iPad's Wi-Fi connection.
 2. Edit the control server address directly under its status row on the main page.
 3. Tap Start Session, then confirm Start Broadcast in Apple's prompt.
 4. Complete pointer calibration if needed. Use any iPad app during the session.
@@ -111,7 +111,7 @@ an update, the activity says Open app for current status rather than claiming
 the session is still starting or active. Reliable suspended-app updates need
 ActivityKit push notifications through APNs. The transport is implemented but
 requires a paid-team push-enabled build and APNs credentials. See
-[Live Activity push setup](../control_server/LIVE_ACTIVITY.md). Personal Team
+[Live Activity push setup](../host/control_server/LIVE_ACTIVITY.md). Personal Team
 builds retain the foreground-only behavior.
 Background dismissal and narrow-layout visual verification are still pending.
 The control server's device-status response includes `liveActivityUpdating` to
@@ -120,7 +120,7 @@ report whether the extension finds and updates its matching activity.
 ## Control Center and Shortcuts
 
 On iPadOS 18 or later, open Control Center, enter edit mode, choose Add a Control,
-and search for iPad Computer Use. Add its Start Session control. The app cannot
+and search for Oh My Phone Use. Add its Start Session control. The app cannot
 add controls to Control Center on your behalf.
 
 Tapping the control opens the app, checks connections, and opens Apple's broadcast
@@ -146,7 +146,7 @@ immediately restarts checking, including during retry backoff. Failed server
 checks back off from 4 to 30 seconds; a successful check restores the 2-second
 status interval. Checks pause while the app is not active.
 
-The public app name is iPad Computer Use. The existing bundle identifier,
+The display name is Oh My Phone Use. The upstream bundle identifier,
 keychain service, and URL scheme remain unchanged to preserve installed app
 data and links.
 

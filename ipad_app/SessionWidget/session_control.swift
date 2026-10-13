@@ -10,7 +10,7 @@ struct SessionControl: ControlWidget {
                 Label("Start Session", systemImage: "cursorarrow.motionlines")
             }
         }
-        .displayName("iPad Computer Use")
+        .displayName("Oh My Phone Use")
         .description("Start a session and confirm screen sharing.")
     }
 }

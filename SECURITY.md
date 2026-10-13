@@ -12,16 +12,16 @@ This is developer tooling, not a hardened public remote-control service.
   routing. Do not expose all routes or forward raw development ports publicly.
 - A reverse proxy connects from loopback and can defeat loopback-only route
   checks if it forwards administrative paths. Allow only the app paths documented
-  in control_server/README.md and reject browser origins.
+  in host/control_server/README.md and reject browser origins.
 - The board's HTTP input tool requires an input-device secret for mutating
   routes. The control server stores the same secret and sends it to the iPad app
   only after accepting a session. The protocol is plaintext HTTP on your Wi-Fi
   network, with the secret stored in the board's flash (NVS) and sent by the app
   in every mutating request. Anyone on that network who learns the secret can
   inject keyboard and mouse input into the paired device: use a trusted network,
-  and reprovision (`tools/provision.sh`) if the secret leaks. The Bluetooth LE
+  and reprovision (`host/tools/provision.sh`) if the secret leaks. The Bluetooth LE
   pairing is "Just Works" (no code), like most Bluetooth mice.
-- The phone call service (`tools/phone_service.py`) listens on loopback only
+- The phone call service (`host/tools/phone_service.py`) listens on loopback only
   and stores call sessions and transcripts under `.state/phoneuse/`.
 - Session authorization is in server memory and expires on restart. Pending
   permits expire after two minutes; active sessions end on disconnect. No

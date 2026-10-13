@@ -2,18 +2,18 @@
 
 ## iPad Computer Use
 
-The screen-control part of PhoneUse is derived from
+The screen-control part of Oh My Phone Use is derived from
 [jamiepinheiro/ipad_computer_use](https://github.com/jamiepinheiro/ipad_computer_use)
 (commit `ac07704`, tagged `upstream-ac07704` in this repository). The idea of
 driving an iPad/iPhone through a hardware HID input tool plus a ReplayKit
 screen-sharing app comes from that project, and these parts contain its code,
-modified for the PhoneUse board:
+modified for the Oh My Phone Use board:
 
 - `ipad_app/`: iPad/iPhone app, broadcast extension and session widget
-- `control_server/`: control server, pointer calibration, MCP adapter and the
-  input-record codec (`control_server/protocol/`)
+- `host/control_server/`: control server, pointer calibration, MCP adapter and the
+  input-record codec (`host/control_server/protocol/`)
 - `docs/input_protocol.md`: the input tool HTTP protocol, implemented by
-  `components/input_tool/`
+  `firmware/components/input_tool/`
 
 That code is used under the following license:
 
@@ -45,8 +45,8 @@ SOFTWARE.
 
 - [ESP-IDF](https://github.com/espressif/esp-idf) and the `espressif/mdns`
   component (Apache-2.0), fetched by the ESP-IDF component manager at build time.
-- `ws` 8.21.3 (MIT), installed by npm from `control_server/package-lock.json`.
-- `pyserial` (BSD-3-Clause), installed from `tools/requirements.txt`.
+- `ws` 8.21.3 (MIT), installed by npm from `host/control_server/package-lock.json`.
+- `pyserial` (BSD-3-Clause), installed from `host/tools/requirements.txt`.
 - whisper.cpp, ffmpeg and the macOS `say` command, used by the call tools when
   installed separately.
 - Apple SDKs and tooling, installed separately.

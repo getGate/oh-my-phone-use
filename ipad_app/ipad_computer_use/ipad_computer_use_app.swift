@@ -129,7 +129,7 @@ struct RelayView: View {
                         .accessibilityHidden(!showNativePicker)
                 }.padding(24).frame(maxWidth: 560).frame(maxWidth: .infinity)
             }
-            .navigationTitle("iPad Computer Use").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Oh My Phone Use").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

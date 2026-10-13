@@ -3,7 +3,6 @@ build/
 sdkconfig
 sdkconfig.old
 managed_components/
-test/host/build/
 
 # Python
 .venv/
@@ -13,7 +12,7 @@ __pycache__/
 # macOS
 .DS_Store
 
-# Node (control_server/)
+# Node (host/control_server/)
 node_modules/
 
 # iOS app signing and Xcode user state (ipad_app/)
@@ -31,8 +30,8 @@ xcuserdata/
 # HFP call audio test build (README, "HFP call audio test")
 build_hfp/
 
-# Call recordings of tools/call_audio.py (private audio)
+# Call recordings of host/tools/call_audio.py (private audio)
 *.wav
 
-# Local call sessions and transcripts
+# Local state: call sessions and transcripts, control server secret, screenshots
 .state/

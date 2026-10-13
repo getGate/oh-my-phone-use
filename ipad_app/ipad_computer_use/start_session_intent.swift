@@ -22,8 +22,8 @@ final class SessionLaunchRequest {
 }
 
 struct StartSessionIntent: AppIntent {
-    static let title: LocalizedStringResource = "Start iPad Computer Use Session"
-    static let description = IntentDescription("Open iPad Computer Use and request screen sharing for a session.")
+    static let title: LocalizedStringResource = "Start Oh My Phone Use Session"
+    static let description = IntentDescription("Open Oh My Phone Use and request screen sharing for a session.")
     static let openAppWhenRun = true
 
     @MainActor

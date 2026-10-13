@@ -106,7 +106,7 @@ struct SharedConfiguration: Codable {
         var value: CFTypeRef?
         let result = SecItemCopyMatching(query as CFDictionary, &value)
         guard result == errSecSuccess, let data = value as? Data else {
-            throw RelayError(message: "Save the broadcast connection in iPad Computer Use first (\(result))")
+            throw RelayError(message: "Save the broadcast connection in Oh My Phone Use first (\(result))")
         }
         return try JSONDecoder().decode(Self.self, from: data)
     }

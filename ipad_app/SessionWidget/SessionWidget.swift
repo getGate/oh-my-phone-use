@@ -15,7 +15,7 @@ struct SessionWidget: Widget {
             HStack(spacing: 12) {
                 Image(systemName: "cursorarrow.motionlines").font(.title2).foregroundStyle(.teal)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("iPad Computer Use Session").font(.headline)
+                    Text("Oh My Phone Use Session").font(.headline)
                     Text(context.isStale ? "Open app for current status" : context.state.status).font(.subheadline)
                 }
                 Spacer()
@@ -24,7 +24,7 @@ struct SessionWidget: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) { Image(systemName: "cursorarrow.motionlines") }
-                DynamicIslandExpandedRegion(.center) { Text("iPad Computer Use") }
+                DynamicIslandExpandedRegion(.center) { Text("Oh My Phone Use") }
                 DynamicIslandExpandedRegion(.bottom) { Text(context.isStale ? "Open app for current status" : context.state.status) }
             } compactLeading: {
                 Image(systemName: "cursorarrow.motionlines")

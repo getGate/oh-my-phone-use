@@ -66,16 +66,16 @@ final class StatusProtocol: URLProtocol {
         precondition(DongleClient.configured("http://phoneuse.local").host == "phoneuse.local")
         precondition(DongleClient().host == "172.31.254.1")
         let esp = try! JSONDecoder().decode(DongleStatus.self, from: Data(
-            "{\"device\":\"PhoneUse ESP32\",\"transport\":\"Wi-Fi + BLE\",\"running\":false,\"state\":\"idle\",\"hidReady\":false,\"reports\":3,\"bleConnected\":false,\"hint\":\"Pair the tool\"}".utf8))
+            "{\"device\":\"Oh My Phone Use ESP32\",\"transport\":\"Wi-Fi + BLE\",\"running\":false,\"state\":\"idle\",\"hidReady\":false,\"reports\":3,\"bleConnected\":false,\"hint\":\"Pair the tool\"}".utf8))
         precondition(esp.transport == "Wi-Fi + BLE" && esp.hint == "Pair the tool" && !esp.hidReady)
         precondition(SetupStatus.describe(esp) == "Pair the tool")
         let espReady = try! JSONDecoder().decode(DongleStatus.self, from: Data(
-            "{\"device\":\"PhoneUse ESP32\",\"transport\":\"Wi-Fi + BLE\",\"running\":false,\"state\":\"done\",\"hidReady\":true}".utf8))
-        precondition(SetupStatus.describe(espReady) == "PhoneUse ESP32 · Wi-Fi + BLE")
+            "{\"device\":\"Oh My Phone Use ESP32\",\"transport\":\"Wi-Fi + BLE\",\"running\":false,\"state\":\"done\",\"hidReady\":true}".utf8))
+        precondition(SetupStatus.describe(espReady) == "Oh My Phone Use ESP32 · Wi-Fi + BLE")
         precondition(SetupStatus.describe(tool) == "XIAO RP2040 · USB")
         precondition(SetupStatus.describe(unidentified) == "Input tool · USB")
         let espBusy = try! JSONDecoder().decode(DongleStatus.self, from: Data(
-            "{\"device\":\"PhoneUse ESP32\",\"transport\":\"Wi-Fi + BLE\",\"running\":true,\"state\":\"typing\",\"hidReady\":true}".utf8))
+            "{\"device\":\"Oh My Phone Use ESP32\",\"transport\":\"Wi-Fi + BLE\",\"running\":true,\"state\":\"typing\",\"hidReady\":true}".utf8))
         precondition(SetupStatus.describe(espBusy) == "Input tool is sending input")
         let storedTool = try! JSONSerialization.data(withJSONObject: [
             "address": "wss://control.example/device", "sessionID": "s", "deviceID": "d", "inputToolAddress": "http://phoneuse.local"
