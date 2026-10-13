@@ -15,14 +15,67 @@ for the phone and as its hands-free car kit; an app on the phone shares the scre
 action is real: taps reach real apps, calls reach real people. Act only on what the user asked
 for and stop when it is done.
 
-## Before starting
+## Before starting: help the user connect the equipment
 
-1. Call `status`. Screen control needs `connected: true` (an active session in the phone app)
-   and `pointerCalibrated: true`. If not, ask the user to open the app, tap **Start Session**,
-   confirm the broadcast, and run **Calibrate Pointer** when asked.
-2. For calls, call `phone_status`. It needs the hands-free link up (`call.slc` is `"1"`),
-   `speech.ready`, and no call in progress. If the result says the phone service is not running, tell the user the start
-   command it gives; the phone tools appear after reconnecting this MCP server.
+Choose the setup for the requested task. When setup is missing or the user asks how to
+connect, give the relevant numbered instructions below in the user's language, with the
+cable endpoints, Bluetooth device name, settings path and expected result. Guide them through
+unfinished steps and verify readiness afterwards; do not just say "connect the device" or
+repeat steps already confirmed complete.
+
+### Phone calls (HFP over USB)
+
+Explain the connection: **Mac → USB data cable → ESP32 → Bluetooth → iPhone**.
+The USB cable connects the board to the Mac, not to the iPhone. Calls do not require board
+Wi-Fi, HID pairing, AssistiveTouch, the phone app or a screen-sharing session.
+
+1. The ESP32 must have an HFP firmware build. For a new calls-only setup, use the HFP-only
+   configuration with Wi-Fi and HID disabled; an already working HFP + HID build also supports
+   calls and does not need reflashing. If the firmware is unknown or lacks HFP, explain that it needs
+   to be checked or flashed using the [firmware guide](../../firmware/README.md#hfp-call-audio-test).
+   Do not assume that plugging in the board changes its firmware.
+2. Ask the user to connect the ESP32 to the Mac with a USB **data** cable and keep it connected
+   throughout the call. Check for its serial port (usually `/dev/cu.usbserial-...` or
+   `/dev/cu.SLAB_USBtoUART`). If absent, ask them to check the cable and USB connection before
+   continuing.
+3. On the iPhone, open **Settings → Bluetooth**, turn Bluetooth on, select
+   **Oh My Phone Use Audio** under **Other Devices**, and confirm pairing. It should appear
+   under **My Devices** as **Connected**. Pair with the iPhone, not the Mac;
+   **Oh My Phone Use HID** is a different device and does not establish the audio connection.
+   If Audio is missing from **Other Devices**, check **My Devices** first: the firmware stops
+   advertising for Classic Bluetooth discovery while connected. If `phone_status` reports
+   `call.slc: "1"` but this iPhone has no Audio device, check whether the board reconnected to
+   another previously paired phone before changing firmware or clearing bonds.
+4. Explain the audio routing options: on the iPhone, **Settings → Accessibility → Touch →
+   Call Audio Routing → Bluetooth Headset** makes calls prefer a Bluetooth headset; alternatively,
+   select **Oh My Phone Use Audio** using the audio button during a call. Make clear that the
+   settings option changes the default for other calls too.
+5. Check the phone service on the Mac. It must own the board's serial port exclusively; close
+   serial monitors and other board clients before starting it. If it is not running, provide
+   its reported start command or follow [host setup](../../host/README.md#connect-an-agent),
+   using the detected port. Reconnect the MCP client if necessary to load the phone tools.
+6. Call `phone_status` and require `call.slc` to be `"1"`, `speech.ready` to be true and no call
+   in progress before dialing. Report any missing prerequisite and the specific next setup
+   action. A connected USB cable or Bluetooth settings label alone does not prove readiness.
+
+### Screen control (Wi-Fi input tool and BLE HID)
+
+Explain the connections: the ESP32 is powered and paired to the iPhone over Bluetooth;
+its Wi-Fi input tool must be reachable from the phone, and the phone app must reach the
+Mac's control server. The HFP-only firmware above does not provide this screen-control path.
+
+1. Use the Wi-Fi + HID firmware, power the board, and pair **Oh My Phone Use HID** in the
+   iPhone's **Settings → Bluetooth**. Expect **Connected**.
+2. On iPhone, enable **Settings → Accessibility → Touch → AssistiveTouch** and check that
+   the pointer appears. Leave AssistiveTouch off on iPad, which has its own mouse pointer.
+3. Put the board and phone on the same Wi-Fi network and ensure the phone can reach the
+   Mac's control server. In the phone app's setup, enter the board's input tool address
+   (`http://phoneuse.local` or its verified IP) and the actual control server URL; verify both.
+   Follow the [app setup guide](../../ios/README.md#session-flow) for these fields.
+4. Follow the app's setup or tap **Start Session**, confirm **Start Broadcast** in Apple's
+   prompt, and complete pointer calibration when requested.
+5. Call `status` and require `connected: true` and `pointerCalibrated: true` before pointer
+   actions. If either is missing, tell the user which app step to complete.
 
 ## Screen control loop
 
