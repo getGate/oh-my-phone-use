@@ -28,15 +28,15 @@ tools live in `host/tools/`.
 
 | Item | Version / notes |
 | --- | --- |
-| Board | Espressif ESP32-PICO-KIT-1 (ESP32-PICO-V3, classic ESP32, CP2102N USB-UART). ESP32-PICO-KIT V4 (PICO-D4) should work unchanged. |
-| ESP-IDF | **v6.1** (this project was built with v6.1). v5.1+ should work; the `espressif/mdns` component is fetched by the component manager on the first build (needs internet once). |
+| Board | Espressif ESP32-PICO-KIT-1 (ESP32-PICO-V3, classic ESP32, CP2102N USB-UART). ESP32-PICO-KIT V4 (PICO-D4) has not been validated. Target `esp32` only; S3/C3 are not supported. |
+| ESP-IDF | **v6.1** (the version used to build this project); other versions have not been validated. The `espressif/mdns` component is fetched by the component manager on the first build (needs internet once). |
 | Python for ESP-IDF | 3.10 or newer (ESP-IDF v6.1 requirement) |
-| Host tools | macOS, Python 3 with `pyserial` (`python3 -m pip install -r host/tools/requirements.txt`) |
-| iPhone / iPad | iOS 13 or newer (pointer support); tested target is current iOS |
+| Host tools | macOS, Python 3 with `pyserial` (use the repository-root `.venv/`; see [Quick start](../README.md#quick-start-with-your-agent)). Use Python 3.10+ for a shared host/ESP-IDF setup. The call speech path requires macOS `say`; the complete setup has not been validated on Linux or Windows. |
+| iPhone / iPad | The screen-sharing app requires **iOS/iPadOS 17 or later**; see [device testing notes](../ios/README.md#build-and-install). Bluetooth pointer support alone does not establish compatibility with the complete app setup. |
 | For screen control | Node.js 20+, macOS with Xcode and an Apple signing team (see [Screen control](../README.md#quick-start-with-your-agent)) |
 
-Install ESP-IDF v6.1 if you do not have it. macOS ships Python 3.9, which ESP-IDF v6.1 rejects,
-so put a newer Python first on `PATH` before running `install.sh` and `export.sh`
+Install ESP-IDF v6.1 if you do not have it. Check `python3 --version` and put Python 3.10+
+first on `PATH` before running `install.sh` and `export.sh`
 (for example `brew install python@3.12`, or `uv python install 3.12`):
 
 ```bash

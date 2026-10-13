@@ -27,6 +27,9 @@ Agent (Claude, …) ──MCP──▶ MCP server ─┬─▶ control server �
 
 ## Status
 
+The repository structure and APIs are currently unstable and may change without
+backward compatibility as the project evolves.
+
 | Capability | State |
 | --- | --- |
 | Screen control through MCP (`get_screen`, `issue_actions`) | Works with the default firmware build; pointer calibration in the app |
@@ -36,8 +39,13 @@ Agent (Claude, …) ──MCP──▶ MCP server ─┬─▶ control server �
 
 ## Quick start (with your agent)
 
-You need an ESP32-PICO-KIT-1 (classic ESP32), a Mac with ESP-IDF, Node.js 20+, Xcode and an
-Apple signing team, and an iPhone or iPad.
+You need an ESP32-PICO-KIT-1 (classic ESP32), a Mac with ESP-IDF v6.1, Python 3.10+,
+Node.js 20+, full Xcode and an Apple signing team, and an iPhone or iPad running
+iOS/iPadOS 17 or later. This is the app's deployment target, not a claim that every
+supported OS version has been tested; see the [device testing notes](ios/README.md#build-and-install).
+The current phone-call speech path uses macOS `say`; Linux and Windows are not validated
+for the complete setup. Screen control and calls require different firmware builds on
+the current board, as described in [Status](#status).
 
 1. **Firmware**: build and flash it, pair the phone over Bluetooth, and on an iPhone enable
    AssistiveTouch ([firmware/README.md](firmware/README.md#build-and-flash)):
@@ -114,11 +122,21 @@ agent dial only numbers you gave it, say that it is an AI, and confirm what it h
 ```bash
 make -C firmware/test/host test                           # firmware logic, no hardware
 npm test --prefix host/control_server                     # control server, MCP server, calibration
-.venv/bin/python -m unittest discover -s host/test/phone  # phone service, simulated board
-bash ios/scripts/test_relay.sh                       # app relay against the control server (Xcode)
-bash ios/scripts/test_frames.sh
-bash ios/scripts/test_setup.sh
+.venv/bin/python -m unittest discover -s host/test/phone    # phone service, simulated board
+bash ios/scripts/test_relay.sh                            # app relay against the control server
+bash ios/scripts/test_frames.sh                           # fresh-frame selection
+bash ios/scripts/test_setup.sh                            # setup-step status
+bash ios/scripts/test_session_launch.sh                   # Start Session intent hand-off
+bash ios/scripts/test_calibration_click.sh                # calibration click policy
 ```
+
+Run these from the repository root after installing the Node and Python dependencies above.
+The Swift harness scripts require an Apple Silicon Mac running macOS 14 or later, Xcode
+command-line tools and Node.js 20+; four scripts currently compile for `arm64-apple-macosx14.0`.
+They use simulated peers and need no phone, board or signing credentials. The Node-only suite
+skips the native relay test; `test_relay.sh` builds the Swift harness and runs that test too.
+These tests do not replace an iOS app build or the firmware's
+[hardware acceptance test](firmware/README.md#testing).
 
 ## Roadmap
 
@@ -129,6 +147,8 @@ bash ios/scripts/test_setup.sh
   USB serial link, so that the Mac and the phone app use the same board API.
 - **Standalone app**: the agent loop, screen control and calls in the phone app, sharing test
   vectors with the control server's action compiler and calibration.
+- **Rust migration**: migrate the Node.js control server and MCP server in
+  `host/control_server/`, and the Python tools and phone service in `host/tools/`, to Rust.
 
 ## Credits and license
 
