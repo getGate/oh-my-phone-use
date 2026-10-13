@@ -1,5 +1,12 @@
 menu "PhoneUse: Bluetooth stack"
 
+    config PHONEUSE_HEAP_DIAGNOSTICS
+        bool "Log internal heap statistics every five seconds"
+        default n
+        help
+            Diagnostic builds only: log free, minimum-free and largest-block sizes
+            for internal byte-addressable RAM while exercising Bluetooth profiles.
+
     config PHONEUSE_BT_KEEP_CLASSIC
         bool "Keep the Classic BT (BR/EDR) controller running (needed for HFP)"
         default n

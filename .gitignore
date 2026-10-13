@@ -23,3 +23,6 @@ build_hfp/
 
 # Call recordings of tools/call_audio.py (private audio)
 *.wav
+
+# Local call sessions and transcripts
+.state/

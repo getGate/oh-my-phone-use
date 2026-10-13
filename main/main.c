@@ -19,6 +19,9 @@
 #include "esp_timer.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
+#if CONFIG_PHONEUSE_HEAP_DIAGNOSTICS
+#include "esp_heap_caps.h"
+#endif
 
 #include "bt_stack.h"
 #include "command_parser.h"
@@ -39,6 +42,18 @@
 #endif
 
 static const char *TAG = "main";
+
+#if CONFIG_PHONEUSE_HEAP_DIAGNOSTICS
+static void log_heap(void *arg)
+{
+    (void)arg;
+    const uint32_t caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
+    ESP_LOGI(TAG, "HEAP internal_free=%u internal_min=%u internal_largest=%u",
+             (unsigned)heap_caps_get_free_size(caps),
+             (unsigned)heap_caps_get_minimum_free_size(caps),
+             (unsigned)heap_caps_get_largest_free_block(caps));
+}
+#endif
 
 static uint32_t uptime_seconds(void)
 {
@@ -179,4 +194,11 @@ void app_main(void)
     ESP_LOGI(TAG, "PhoneUse call audio ready: hands-free unit \"%s\"", CONFIG_PHONEUSE_HFP_DEVICE_NAME);
 #endif
     ESP_LOGI(TAG, "free heap after start-up: %lu bytes", (unsigned long)esp_get_free_heap_size());
+#if CONFIG_PHONEUSE_HEAP_DIAGNOSTICS
+    static esp_timer_handle_t heap_timer;
+    const esp_timer_create_args_t args = { .callback = log_heap, .name = "heap_stats" };
+    ESP_ERROR_CHECK(esp_timer_create(&args, &heap_timer));
+    log_heap(NULL);
+    ESP_ERROR_CHECK(esp_timer_start_periodic(heap_timer, 5000000));
+#endif
 }
