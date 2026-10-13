@@ -126,8 +126,8 @@ the current board, as described in [Status](#status).
 
 The MCP server and the control server have no authentication: keep them on loopback or a
 private network ([SECURITY.md](SECURITY.md)). A call reaches a real person: the skill makes the
-agent dial only numbers you gave it, introduce itself as Leo’s agent, explain that replies
-are transcribed for you, and confirm what it heard.
+agent dial only numbers you gave it, introduce itself using your preferred name or the
+available context, explain that replies are transcribed for you, and confirm what it heard.
 
 ## Repository layout
 
