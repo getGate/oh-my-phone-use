@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C20000000000000000000030 = {isa = PBXBuildFile; fileRef = C20000000000000000000020; };
 		A10000000000000000000030 /* OhMyPhoneUseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000020 /* OhMyPhoneUseApp.swift */; };
 		A10000000000000000000031 /* RelayConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* RelayConnection.swift */; };
 		A10000000000000000000032 /* DongleClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* DongleClient.swift */; };
@@ -19,6 +18,7 @@
 		B10000000000000000000035 /* SharedConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000024 /* SharedConfiguration.swift */; };
 		B10000000000000000000053 /* Broadcast.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* Broadcast.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C10000000000000000000030 /* CalibrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000020 /* CalibrationView.swift */; };
+		C20000000000000000000030 /* OhMyPhoneUse/calibration_click_policy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000020 /* OhMyPhoneUse/calibration_click_policy.swift */; };
 		D10000000000000000000030 /* SetupStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000020 /* SetupStatus.swift */; };
 		E10000000000000000000030 /* SessionWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000020 /* SessionWidget.swift */; };
 		E10000000000000000000031 /* SessionActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000021 /* SessionActivity.swift */; };
@@ -67,7 +67,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		C20000000000000000000020 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OhMyPhoneUse/calibration_click_policy.swift; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000006 /* OhMyPhoneUse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = OhMyPhoneUse.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000020 /* OhMyPhoneUseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OhMyPhoneUseApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000021 /* RelayConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayConnection.swift; sourceTree = "<group>"; };
@@ -79,6 +78,7 @@
 		B10000000000000000000023 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B10000000000000000000024 /* SharedConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedConfiguration.swift; sourceTree = "<group>"; };
 		C10000000000000000000020 /* CalibrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationView.swift; sourceTree = "<group>"; };
+		C20000000000000000000020 /* OhMyPhoneUse/calibration_click_policy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OhMyPhoneUse/calibration_click_policy.swift; sourceTree = SOURCE_ROOT; };
 		D10000000000000000000020 /* SetupStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupStatus.swift; sourceTree = "<group>"; };
 		E10000000000000000000006 /* SessionWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = SessionWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E10000000000000000000020 /* SessionWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWidget.swift; sourceTree = "<group>"; };
@@ -169,6 +169,7 @@
 			children = (
 				F40000000000000000000001 /* PrivacyInfo.xcprivacy */,
 				F30000000000000000000001 /* Broadcast/broadcast_icon.png */,
+				C20000000000000000000020 /* OhMyPhoneUse/calibration_click_policy.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -299,7 +300,7 @@
 				A10000000000000000000032 /* DongleClient.swift in Sources */,
 				B10000000000000000000034 /* SharedConfiguration.swift in Sources */,
 				C10000000000000000000030 /* CalibrationView.swift in Sources */,
-				C20000000000000000000030 /* calibration_click_policy.swift in Sources */,
+				C20000000000000000000030 /* OhMyPhoneUse/calibration_click_policy.swift in Sources */,
 				D10000000000000000000030 /* SetupStatus.swift in Sources */,
 				E10000000000000000000031 /* SessionActivity.swift in Sources */,
 			);
@@ -364,7 +365,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
-
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				KEY_RELAY_BUNDLE_ID = org.example.ipadcontrol;
 				SDKROOT = iphoneos;
@@ -383,7 +383,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = app_icon;
 				CODE_SIGN_ENTITLEMENTS = "$(APP_ENTITLEMENTS)";
 				CODE_SIGN_STYLE = Automatic;
-
 				INFOPLIST_FILE = OhMyPhoneUse/Info.plist;
 				LIVE_ACTIVITY_PUSH_ENABLED = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(KEY_RELAY_BUNDLE_ID)";
@@ -400,7 +399,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = app_icon;
 				CODE_SIGN_ENTITLEMENTS = "$(APP_ENTITLEMENTS)";
 				CODE_SIGN_STYLE = Automatic;
-
 				INFOPLIST_FILE = OhMyPhoneUse/Info.plist;
 				LIVE_ACTIVITY_PUSH_ENABLED = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(KEY_RELAY_BUNDLE_ID)";

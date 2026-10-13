@@ -91,7 +91,8 @@ Apple signing team, and an iPhone or iPad.
    `host/control_server/.state/`.
 
 **Phone calls** need the HFP firmware build and the phone service on the Mac; see
-[host/README.md](host/README.md#phone-service).
+[host/README.md](host/README.md#phone-service). When a step does not behave as described,
+[docs/troubleshooting.md](docs/troubleshooting.md) lists the symptoms and their fixes.
 
 The MCP server and the control server have no authentication: keep them on loopback or a
 private network ([SECURITY.md](SECURITY.md)). A call reaches a real person: the skill makes the
@@ -105,7 +106,8 @@ agent dial only numbers you gave it, say that it is an AI, and confirm what it h
 | [`host/`](host/README.md) | Mac side: unified MCP server and control server (`host/control_server/`, Node), phone service and serial tools (`host/tools/`, Python) |
 | [`ios/`](ios/README.md) | iPhone/iPad app: screen sharing (ReplayKit), sessions, pointer calibration, forwards input to the board |
 | [`skills/oh-my-phone-use/`](skills/oh-my-phone-use/SKILL.md) | Skill for agents that use the MCP server |
-| [`docs/`](docs/input_protocol.md) | Protocols between the parts |
+| [`docs/`](docs/) | [Input tool HTTP protocol](docs/input_protocol.md) between the app, the control server and the board; [troubleshooting](docs/troubleshooting.md) by symptom. The other protocols are documented next to their implementation: serial in [firmware/README.md](firmware/README.md#serial-protocol), control server in [host/control_server/PROTOCOL.md](host/control_server/PROTOCOL.md) |
+| [`AGENTS.md`](AGENTS.md) | Conventions for coding agents and contributors changing this repository (one per component as well) |
 
 ## Development
 
