@@ -11,10 +11,10 @@ the Push Notifications entitlement. Normal development builds keep push disabled
 2. Create an APNs authentication key in that team's Certificates, Identifiers &
    Profiles portal. Keep the downloaded `.p8` outside the source tree. Record its
    Key ID and Team ID. Never share the key contents in a chat or commit it.
-3. Set the paid team and bundle ID in `ipad_app/.signing.env`, then build:
+3. Set the paid team and bundle ID in `ios/.signing.env`, then build:
 
 ```sh
-LIVE_ACTIVITY_PUSH_ENABLED=YES bash ipad_app/scripts/build.sh -allowProvisioningUpdates
+LIVE_ACTIVITY_PUSH_ENABLED=YES bash ios/scripts/build.sh -allowProvisioningUpdates
 ```
 
 Debug builds use the development entitlement and sandbox APNs. Release defaults

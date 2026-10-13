@@ -3,19 +3,19 @@
   <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES">
     <BuildActionEntries>
       <BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">
-        <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="A10000000000000000000004" BuildableName="ipad_computer_use.app" BlueprintName="ipad_computer_use" ReferencedContainer="container:ipad_computer_use.xcodeproj"/>
+        <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="A10000000000000000000004" BuildableName="OhMyPhoneUse.app" BlueprintName="OhMyPhoneUse" ReferencedContainer="container:OhMyPhoneUse.xcodeproj"/>
       </BuildActionEntry>
     </BuildActionEntries>
   </BuildAction>
   <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES"/>
   <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" debugServiceExtension="internal" allowLocationSimulation="YES">
     <BuildableProductRunnable runnableDebuggingMode="0">
-      <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="A10000000000000000000004" BuildableName="ipad_computer_use.app" BlueprintName="ipad_computer_use" ReferencedContainer="container:ipad_computer_use.xcodeproj"/>
+      <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="A10000000000000000000004" BuildableName="OhMyPhoneUse.app" BlueprintName="OhMyPhoneUse" ReferencedContainer="container:OhMyPhoneUse.xcodeproj"/>
     </BuildableProductRunnable>
   </LaunchAction>
   <ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" savedToolIdentifier="" useCustomWorkingDirectory="NO" debugDocumentVersioning="YES">
     <BuildableProductRunnable runnableDebuggingMode="0">
-      <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="A10000000000000000000004" BuildableName="ipad_computer_use.app" BlueprintName="ipad_computer_use" ReferencedContainer="container:ipad_computer_use.xcodeproj"/>
+      <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="A10000000000000000000004" BuildableName="OhMyPhoneUse.app" BlueprintName="OhMyPhoneUse" ReferencedContainer="container:OhMyPhoneUse.xcodeproj"/>
     </BuildableProductRunnable>
   </ProfileAction>
   <AnalyzeAction buildConfiguration="Debug"/>

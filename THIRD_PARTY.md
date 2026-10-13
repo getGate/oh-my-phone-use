@@ -9,7 +9,7 @@ driving an iPad/iPhone through a hardware HID input tool plus a ReplayKit
 screen-sharing app comes from that project, and these parts contain its code,
 modified for the Oh My Phone Use board:
 
-- `ipad_app/`: iPad/iPhone app, broadcast extension and session widget
+- `ios/`: iPad/iPhone app, broadcast extension and session widget
 - `host/control_server/`: control server, pointer calibration, MCP adapter and the
   input-record codec (`host/control_server/protocol/`)
 - `docs/input_protocol.md`: the input tool HTTP protocol, implemented by

@@ -212,4 +212,4 @@ Tailscale clients must be on the permitted tailnet; external cloud clients need
 a separately authenticated tunnel.
 
 Test with `npm test --prefix host/control_server`. The Swift integration test is
-run from `ipad_app/scripts/test_relay.sh` and is skipped in the Node-only suite.
+run from `ios/scripts/test_relay.sh` and is skipped in the Node-only suite.

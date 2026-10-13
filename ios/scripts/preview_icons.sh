@@ -14,7 +14,7 @@ for rendition in Default Dark TintedLight TintedDark; do
     TintedLight) name=tinted_light ;;
     TintedDark) name=tinted_dark ;;
   esac
-  "$composer" ipad_computer_use/app_icon.icon --export-image \
+  "$composer" OhMyPhoneUse/app_icon.icon --export-image \
     --output-file "build/icon_previews/$name.png" --platform iOS \
     --rendition "$rendition" --width 512 --height 512 --scale 1
 done

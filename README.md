@@ -65,14 +65,14 @@ Apple signing team, and an iPhone or iPad.
    bash host/tools/provision.sh /dev/cu.usbserial-XXXXX "Wi-Fi SSID" "password"
    ```
 
-4. **Install the app** ([ipad_app/README.md](ipad_app/README.md)): copy
-   `ipad_app/.signing.env.example` to `ipad_app/.signing.env`, set your team ID and a unique
+4. **Install the app** ([ios/README.md](ios/README.md)): copy
+   `ios/.signing.env.example` to `ios/.signing.env`, set your team ID and a unique
    bundle ID, then
 
    ```bash
-   bash ipad_app/scripts/build.sh -allowProvisioningUpdates
+   bash ios/scripts/build.sh -allowProvisioningUpdates
    xcrun devicectl list devices
-   bash ipad_app/scripts/install.sh YOUR_DEVICE_ID
+   bash ios/scripts/install.sh YOUR_DEVICE_ID
    ```
 
    In the app, enter `http://phoneuse.local` as the input tool, `ws://YOUR_MAC_IP:8765/device`
@@ -103,7 +103,7 @@ agent dial only numbers you gave it, say that it is an AI, and confirm what it h
 | --- | --- |
 | [`firmware/`](firmware/README.md) | ESP-IDF firmware: BLE HID mouse + keyboard, Wi-Fi input tool, HFP hands-free unit, host tests |
 | [`host/`](host/README.md) | Mac side: unified MCP server and control server (`host/control_server/`, Node), phone service and serial tools (`host/tools/`, Python) |
-| [`ipad_app/`](ipad_app/README.md) | iPhone/iPad app: screen sharing (ReplayKit), sessions, pointer calibration, forwards input to the board |
+| [`ios/`](ios/README.md) | iPhone/iPad app: screen sharing (ReplayKit), sessions, pointer calibration, forwards input to the board |
 | [`skills/oh-my-phone-use/`](skills/oh-my-phone-use/SKILL.md) | Skill for agents that use the MCP server |
 | [`docs/`](docs/input_protocol.md) | Protocols between the parts |
 
@@ -113,9 +113,9 @@ agent dial only numbers you gave it, say that it is an AI, and confirm what it h
 make -C firmware/test/host test                           # firmware logic, no hardware
 npm test --prefix host/control_server                     # control server, MCP server, calibration
 .venv/bin/python -m unittest discover -s host/test/phone  # phone service, simulated board
-bash ipad_app/scripts/test_relay.sh                       # app relay against the control server (Xcode)
-bash ipad_app/scripts/test_frames.sh
-bash ipad_app/scripts/test_setup.sh
+bash ios/scripts/test_relay.sh                       # app relay against the control server (Xcode)
+bash ios/scripts/test_frames.sh
+bash ios/scripts/test_setup.sh
 ```
 
 ## Roadmap

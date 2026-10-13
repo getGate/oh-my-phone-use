@@ -15,8 +15,9 @@ __pycache__/
 # Node (host/control_server/)
 node_modules/
 
-# iOS app signing and Xcode user state (ipad_app/)
+# iOS app signing, Xcode user state and harness builds (ios/)
 .signing.env
+build_iphone/
 xcuserdata/
 *.xcuserstate
 *.mobileprovision

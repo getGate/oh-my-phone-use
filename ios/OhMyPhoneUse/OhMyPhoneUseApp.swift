@@ -1,7 +1,7 @@
 import SwiftUI
 import ReplayKit
 
-@main struct IPadComputerUseApp: App {
+@main struct OhMyPhoneUseApp: App {
     init() {
         let args = CommandLine.arguments
         if let index = args.firstIndex(of: "--relay-url"), args.indices.contains(index + 1) {

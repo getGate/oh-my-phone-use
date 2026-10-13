@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C20000000000000000000030 = {isa = PBXBuildFile; fileRef = C20000000000000000000020; };
-		A10000000000000000000030 /* ipad_computer_use_app.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000020 /* ipad_computer_use_app.swift */; };
+		A10000000000000000000030 /* OhMyPhoneUseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000020 /* OhMyPhoneUseApp.swift */; };
 		A10000000000000000000031 /* RelayConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* RelayConnection.swift */; };
 		A10000000000000000000032 /* DongleClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* DongleClient.swift */; };
 		B10000000000000000000030 /* SampleHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000020 /* SampleHandler.swift */; };
@@ -67,9 +67,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		C20000000000000000000020 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ipad_computer_use/calibration_click_policy.swift; sourceTree = SOURCE_ROOT; };
-		A10000000000000000000006 /* ipad_computer_use.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = ipad_computer_use.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000020 /* ipad_computer_use_app.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ipad_computer_use_app.swift; sourceTree = "<group>"; };
+		C20000000000000000000020 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OhMyPhoneUse/calibration_click_policy.swift; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000006 /* OhMyPhoneUse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = OhMyPhoneUse.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000020 /* OhMyPhoneUseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OhMyPhoneUseApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000021 /* RelayConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayConnection.swift; sourceTree = "<group>"; };
 		A10000000000000000000022 /* DongleClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DongleClient.swift; sourceTree = "<group>"; };
 		A10000000000000000000023 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -119,7 +119,7 @@
 		A10000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000005 /* ipad_computer_use */,
+				A10000000000000000000005 /* OhMyPhoneUse */,
 				B10000000000000000000005 /* Broadcast */,
 				A10000000000000000000003 /* Products */,
 				E10000000000000000000005 /* SessionWidget */,
@@ -130,19 +130,19 @@
 		A10000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000006 /* ipad_computer_use.app */,
+				A10000000000000000000006 /* OhMyPhoneUse.app */,
 				B10000000000000000000006 /* Broadcast.appex */,
 				E10000000000000000000006 /* SessionWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		A10000000000000000000005 /* ipad_computer_use */ = {
+		A10000000000000000000005 /* OhMyPhoneUse */ = {
 			isa = PBXGroup;
 			children = (
 				F20000000000000000000001 /* start_session_intent.swift */,
 				F10000000000000000000001 /* app_icon.icon */,
-				A10000000000000000000020 /* ipad_computer_use_app.swift */,
+				A10000000000000000000020 /* OhMyPhoneUseApp.swift */,
 				A10000000000000000000021 /* RelayConnection.swift */,
 				A10000000000000000000022 /* DongleClient.swift */,
 				A10000000000000000000023 /* Info.plist */,
@@ -151,7 +151,7 @@
 				D10000000000000000000020 /* SetupStatus.swift */,
 				E10000000000000000000021 /* SessionActivity.swift */,
 			);
-			path = ipad_computer_use;
+			path = OhMyPhoneUse;
 			sourceTree = "<group>";
 		};
 		B10000000000000000000005 /* Broadcast */ = {
@@ -186,9 +186,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A10000000000000000000004 /* ipad_computer_use */ = {
+		A10000000000000000000004 /* OhMyPhoneUse */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A10000000000000000000011 /* Build configuration list for PBXNativeTarget "ipad_computer_use" */;
+			buildConfigurationList = A10000000000000000000011 /* Build configuration list for PBXNativeTarget "OhMyPhoneUse" */;
 			buildPhases = (
 				A10000000000000000000007 /* Sources */,
 				A10000000000000000000008 /* Frameworks */,
@@ -201,9 +201,9 @@
 				B10000000000000000000051 /* PBXTargetDependency */,
 				E10000000000000000000051 /* PBXTargetDependency */,
 			);
-			name = ipad_computer_use;
-			productName = ipad_computer_use;
-			productReference = A10000000000000000000006 /* ipad_computer_use.app */;
+			name = OhMyPhoneUse;
+			productName = OhMyPhoneUse;
+			productReference = A10000000000000000000006 /* OhMyPhoneUse.app */;
 			productType = "com.apple.product-type.application";
 		};
 		B10000000000000000000004 /* Broadcast */ = {
@@ -247,7 +247,7 @@
 			attributes = {
 				LastUpgradeCheck = 2600;
 			};
-			buildConfigurationList = A10000000000000000000010 /* Build configuration list for PBXProject "ipad_computer_use" */;
+			buildConfigurationList = A10000000000000000000010 /* Build configuration list for PBXProject "OhMyPhoneUse" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -260,7 +260,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A10000000000000000000004 /* ipad_computer_use */,
+				A10000000000000000000004 /* OhMyPhoneUse */,
 				B10000000000000000000004 /* Broadcast */,
 				E10000000000000000000004 /* SessionWidget */,
 			);
@@ -294,7 +294,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F20000000000000000000011 /* start_session_intent.swift in Sources */,
-				A10000000000000000000030 /* ipad_computer_use_app.swift in Sources */,
+				A10000000000000000000030 /* OhMyPhoneUseApp.swift in Sources */,
 				A10000000000000000000031 /* RelayConnection.swift in Sources */,
 				A10000000000000000000032 /* DongleClient.swift in Sources */,
 				B10000000000000000000034 /* SharedConfiguration.swift in Sources */,
@@ -378,13 +378,13 @@
 		A10000000000000000000042 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				APP_ENTITLEMENTS = ipad_computer_use/Shared.entitlements;
+				APP_ENTITLEMENTS = OhMyPhoneUse/Shared.entitlements;
 				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = app_icon;
 				CODE_SIGN_ENTITLEMENTS = "$(APP_ENTITLEMENTS)";
 				CODE_SIGN_STYLE = Automatic;
 
-				INFOPLIST_FILE = ipad_computer_use/Info.plist;
+				INFOPLIST_FILE = OhMyPhoneUse/Info.plist;
 				LIVE_ACTIVITY_PUSH_ENABLED = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(KEY_RELAY_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -395,13 +395,13 @@
 		A10000000000000000000043 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				APP_ENTITLEMENTS = ipad_computer_use/app.entitlements;
+				APP_ENTITLEMENTS = OhMyPhoneUse/app.entitlements;
 				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = app_icon;
 				CODE_SIGN_ENTITLEMENTS = "$(APP_ENTITLEMENTS)";
 				CODE_SIGN_STYLE = Automatic;
 
-				INFOPLIST_FILE = ipad_computer_use/Info.plist;
+				INFOPLIST_FILE = OhMyPhoneUse/Info.plist;
 				LIVE_ACTIVITY_PUSH_ENABLED = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(KEY_RELAY_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -413,7 +413,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = ipad_computer_use/Shared.entitlements;
+				CODE_SIGN_ENTITLEMENTS = OhMyPhoneUse/Shared.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = Broadcast/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -432,7 +432,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = ipad_computer_use/Shared.entitlements;
+				CODE_SIGN_ENTITLEMENTS = OhMyPhoneUse/Shared.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = Broadcast/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -486,7 +486,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A10000000000000000000010 /* Build configuration list for PBXProject "ipad_computer_use" */ = {
+		A10000000000000000000010 /* Build configuration list for PBXProject "OhMyPhoneUse" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A10000000000000000000040 /* Debug */,
@@ -495,7 +495,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A10000000000000000000011 /* Build configuration list for PBXNativeTarget "ipad_computer_use" */ = {
+		A10000000000000000000011 /* Build configuration list for PBXNativeTarget "OhMyPhoneUse" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A10000000000000000000042 /* Debug */,

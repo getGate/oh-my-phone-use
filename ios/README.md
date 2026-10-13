@@ -13,10 +13,10 @@ left empty); the XIAO firmware itself is not part of this repository.
 
 ## Layout
 
-- `ipad_computer_use/`: SwiftUI app, settings, session/status client, HTTP input-tool client (the upstream project name is kept for the Xcode target and bundle data).
+- `OhMyPhoneUse/`: SwiftUI app, settings, session/status client, HTTP input-tool client.
 - `Broadcast/`: ReplayKit extension, fresh-frame capture, background input transport.
 - `SessionWidget/`: session Live Activity presentation.
-- `ipad_computer_use.xcodeproj/`: all three build targets.
+- `OhMyPhoneUse.xcodeproj/`: all three build targets (scheme `OhMyPhoneUse`).
 - `scripts/`, `test/`: build/install commands and Swift integration harnesses.
 
 The app talks to the other components only through their documented HTTP and
@@ -33,7 +33,7 @@ is not physically verified. The app is shown as Oh My Phone Use.
 From the repository root:
 
 ```sh
-cp ipad_app/.signing.env.example ipad_app/.signing.env
+cp ios/.signing.env.example ios/.signing.env
 ```
 
 Set DEVELOPMENT_TEAM and KEY_RELAY_BUNDLE_ID to your team and unique app ID.
@@ -42,9 +42,9 @@ is local only; no personal team/account is embedded in the project. Existing
 installations must keep their original identifiers to preserve app/keychain data.
 
 ```sh
-bash ipad_app/scripts/build.sh -allowProvisioningUpdates
+bash ios/scripts/build.sh -allowProvisioningUpdates
 xcrun devicectl list devices
-bash ipad_app/scripts/install.sh YOUR_IPAD_DEVICE_ID
+bash ios/scripts/install.sh YOUR_IPAD_DEVICE_ID
 ```
 
 For iPhone, substitute its device ID in the install command. Before calibration,
@@ -133,7 +133,7 @@ available in Shortcuts.
 The foreground intent is included in both app and widget targets. It hands a
 one-shot request to the app; no hardware input or screen capture starts in the
 widget extension. The request remains pending until the foreground view checks
-connections. Test the handoff with `bash ipad_app/scripts/test_session_launch.sh`.
+connections. Test the handoff with `bash ios/scripts/test_session_launch.sh`.
 
 ## App icon
 
@@ -156,9 +156,9 @@ appearances. See [icon editing and previews](ICONS.md).
 ## Tests
 
 ```sh
-bash ipad_app/scripts/test_relay.sh
-bash ipad_app/scripts/test_frames.sh
-bash ipad_app/scripts/test_setup.sh
+bash ios/scripts/test_relay.sh
+bash ios/scripts/test_frames.sh
+bash ios/scripts/test_setup.sh
 ```
 
 These require macOS Swift tooling. The relay harness connects to temporary
