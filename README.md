@@ -33,7 +33,7 @@ send a dinner invitation through the iPhone's Messages app.
 
 ![Codex sending a dinner invitation to John, alongside the iPhone showing the sent message and the ESP32 board](docs/images/use-case-1-text-john.png)
 
-*The images are combined for presentation, with the agent's sidebar history removed.*
+*The images are combined for presentation.*
 
 ## Use case 2: Let an agent make phone calls
 
