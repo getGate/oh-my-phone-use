@@ -8,7 +8,8 @@ API, architecture, every Kconfig option and the hardware acceptance test. Read i
 ## Build
 
 - ESP-IDF **v6.1**, Python 3.10+ first on `PATH`, `. ~/esp/esp-idf/export.sh` once per shell.
-  Target is `esp32` only; `set-target` to anything else is unsupported.
+  Targets are `esp32` and, for the default build only, `esp32s3` (XIAO ESP32S3, console on USB
+  Serial/JTAG, see the README's *ESP32-S3 boards*); anything else is unsupported.
 - Always from the repository root with `-C firmware`, and flash at `-b 230400` (faster rates
   corrupt through USB hubs on this board). Serial ports are `/dev/cu.usbserial-*`, never `tty.`.
 - Three build configurations, each in its own build directory so they do not overwrite each
