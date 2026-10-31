@@ -26,9 +26,7 @@ what is missing when its part is not running.
 
    ```bash
    npm ci --prefix host/control_server
-   npm run start:background --prefix host/control_server         # app connection, port 8765
-   npm run calibration:background --prefix host/control_server   # pointer calibration, port 8766
-   npm run mcp:background --prefix host/control_server           # MCP server, port 8780
+   npm run up --prefix host/control_server     # app connection 8765, calibration 8766, MCP 8780
    ```
 
 2. For calls, start the phone service (board on USB, HFP build flashed):

@@ -36,3 +36,6 @@ build_hfp/
 
 # Local state: call sessions and transcripts, control server secret, screenshots
 .state/
+
+# Personal Makefile settings (see Makefile)
+local.mk

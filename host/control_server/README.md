@@ -9,10 +9,11 @@ The server requires no USB access or Apple SDK. Node.js 20+ is required.
 From the repository root, run `npm ci --prefix host/control_server`, then:
 
 ```sh
-npm run start:background --prefix host/control_server
-npm run calibration:background --prefix host/control_server
-npm run mcp:background --prefix host/control_server
+npm run up --prefix host/control_server     # start:background, calibration:background, mcp:background
+npm run down --prefix host/control_server   # stop the three
 ```
+
+`make up` / `make down` from the repository root do the same with the settings in `local.mk`.
 
 For foreground service managers use `npm start --prefix host/control_server` and
 `npm run calibration --prefix host/control_server` and
