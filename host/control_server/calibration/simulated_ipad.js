@@ -24,12 +24,18 @@ const travel = n => n * (0.4 + 2 * (1 - Math.exp(-n / 25)));
 // options.sampleDelayMs: hover samples trail the input tool's completion, as over BLE.
 // options.quantum: resolution of reported positions in points (0.5 on a 2x display).
 // options.acceleration: replaces `travel`.
+// options.start: where the pointer is when the run starts.
+// options.unreported(x, y): true where the page gets no hover, as over the iPadOS 26 window
+//   controls in the screen corners.
+// options.topPanels: pushing the pointer up past the top edge closes the page, as iPadOS opens
+//   Notification Center or Control Center there.
 async function simulateCalibration({touchClicks = false, hiddenReport = 'dropped', lostSamples = [], ignoreClicks = false,
-  sampleDelayMs = 0, quantum = 0.5, acceleration = travel, width = 1194, height = 834, script = null, env = {}, timeoutMs = 60000} = {}) {
+  sampleDelayMs = 0, quantum = 0.5, acceleration = travel, start = {x: 830.5, y: 212}, unreported = () => false, topPanels = false,
+  width = 1194, height = 834, script = null, env = {}, timeoutMs = 60000} = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'calibration-sim-'));
   const calibration = new CalibrationStore(directory);
   // The page was opened with a finger, so the pointer starts hidden and unreported.
-  const pointer = {x: 830.5, y: 212, hidden: true, buttons: 0};
+  const pointer = {...start, hidden: true, buttons: 0};
   const counters = {reports: 0, visibleReports: 0, clicks: 0, actions: 0, unpermitted: 0};
   const lost = new Set(lostSamples);
   let page = null;
@@ -43,15 +49,16 @@ async function simulateCalibration({touchClicks = false, hiddenReport = 'dropped
     if (dx || dy) {
       const counts = Math.hypot(dx, dy), points = acceleration(counts);
       const apply = () => {
-        pointer.x = Math.min(width, Math.max(0, pointer.x + dx / counts * points));
-        pointer.y = Math.min(height, Math.max(0, pointer.y + dy / counts * points));
+        const x = pointer.x + dx / counts * points, y = pointer.y + dy / counts * points;
+        pointer.x = Math.min(width, Math.max(0, x)); pointer.y = Math.min(height, Math.max(0, y));
+        if (topPanels && y < 0) page?.close(1001);
       };
       if (pointer.hidden) {
         pointer.hidden = false;
         if (hiddenReport === 'applied') apply();
       } else {
         apply();
-        if (!lost.has(++counters.visibleReports)) publish('pointer');
+        if (!lost.has(++counters.visibleReports) && !unreported(pointer.x, pointer.y)) publish('pointer');
       }
     }
     if (pointer.buttons & 1 && !(buttons & 1)) {
@@ -91,6 +98,7 @@ async function simulateCalibration({touchClicks = false, hiddenReport = 'dropped
       const timer = setTimeout(() => reject(Error('Simulated calibration timed out: ' + statuses.at(-1))), timeoutMs);
       page = new WebSocket(`ws://127.0.0.1:${app.server.address().port}/native`);
       page.on('error', reject);
+      page.on('close', code => {clearTimeout(timer); reject(Error(`Calibration page closed (${code}) at: ${statuses.at(-1)}`));});
       page.on('message', data => {
         const message = JSON.parse(data);
         if (message.type === 'ready') {

@@ -54,11 +54,18 @@ async function settled(revision, wait = FRESH_WAIT_MS) {
 // A direct touch hides the iPadOS pointer: the finger that opened this page, and every click when
 // AssistiveTouch turns the mouse button into a tap. The report that brings the pointer back is not
 // reported as a position, so nudge out and back until the page sees the pointer again.
+// A pointer left over the status bar or the iPadOS 26 window controls in the corners is not
+// reported either, and nudges cannot move it out: the later attempts walk it down and sideways.
+// While the position is unknown nothing moves up further than it has moved down, because pushing
+// the pointer up past the top edge opens Notification Center or Control Center and the page closes.
+// Nudges therefore do not move back: when the report that reveals the pointer is dropped, the move
+// back would be the only one applied.
+const PROBES = [[60, 60], [-60, 60], [-60, -60]];
 async function wake(reason) {
-  for (let attempt = 1; attempt <= 4; attempt++) {
+  for (let attempt = 1; attempt <= 4 + PROBES.length; attempt++) {
     const revision = (await state()).revision;
-    const n = attempt % 2 ? 4 : -4;
-    await action([{type: 'move', dx: n, dy: n}, {type: 'wait', ms: 120}, {type: 'move', dx: -n, dy: -n}]);
+    if (attempt > 4) {const [dx, dy] = PROBES[attempt - 5]; await action([{type: 'move', dx, dy}]);}
+    else await action([{type: 'move', dx: 4, dy: 4}]);
     const sample = await settled(revision, WAKE_WAIT_MS);
     if (sample) {trace.wakes.push({reason, stage: trace.stage, attempts: attempt}); return sample;}
   }

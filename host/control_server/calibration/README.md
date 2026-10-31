@@ -15,14 +15,22 @@ the worker and requests input cancellation; uncertain actions are not replayed.
 
 ## Telemetry the worker does not take for granted
 
-A pointer report normally shows up as one position sample. Three cases where it
+A pointer report normally shows up as one position sample. Four cases where it
 does not are handled instead of ending the run:
 
 - **Hidden pointer.** A direct touch hides the iPadOS pointer: the finger that
   opened the page, and every click when AssistiveTouch delivers the mouse button
   as a tap. The report that brings the pointer back is not reported as a
-  position. The worker nudges the pointer out and back (`wake`) before the first
-  move and after every click until the page reports a position again.
+  position. The worker nudges the pointer 4 counts down and right (`wake`)
+  before the first move and after every click until the page reports a position
+  again. Nudges do not move back: see the next case.
+- **Pointer over a system area.** The page gets no hover while the pointer is
+  over the status bar or the iPadOS 26 window controls in the screen corners,
+  and the nudges cannot move it out. After four nudges the worker moves the
+  pointer 60 counts down-right, down-left and up-left until the page reports
+  it. While the position is unknown nothing moves up further than it has moved
+  down: pushing the pointer up past the top edge opens Notification Center or
+  Control Center, the app leaves the active state and the page closes.
 - **Late samples.** Through a Wi-Fi + BLE input tool a sample can trail the
   tool's completion. A position is read once samples have stopped for
   `CALIBRATION_SETTLE_MS` (120 ms), not at the first new sample.

@@ -32,8 +32,17 @@ test('calibration worker against a simulated iPad',{concurrency:true},async t=>{
    assert(run.traces[0].samples.some(s=>s.to===null));
    assert(run.traces[0].wakes.some(w=>w.reason==='move not observed'));
   }),
+  ...[[0,0],[1194,834],[1194,0],[0,834],[600,0]].map(([x,y])=>t.test(`a pointer left at (${x}, ${y}), where the page gets no hover, is brought back without pushing into the edges`,async()=>{
+   // No hover over the status bar and the iPadOS 26 window controls in the corners; pushing up past
+   // the top edge opens Notification Center or Control Center and closes the page.
+   const hidden=(x,y)=>y<40||(x<80&&y<80)||(x>1194-80&&y>834-80)||(x<80&&y>834-80);
+   const run=await simulateCalibration({start:{x,y},unreported:hidden,topPanels:true});
+   assertCalibrated(run);
+   assert.equal(run.traces[0].wakes[0].reason,'start');assert(run.traces[0].wakes[0].attempts>4);
+  })),
   t.test('reports too slow to show up as travel still give a usable curve',async()=>{
-   const run=await simulateCalibration({acceleration:n=>n<2?0.02:travel(n)});
+   // No travel at all: a sub-quantum travel would cross a rounding step from some start positions.
+   const run=await simulateCalibration({acceleration:n=>n<2?0:travel(n)});
    assert.equal(run.outcome.status,'Calibration complete');
    const raw=run.traces[0].samples.filter(s=>s.to&&Math.hypot(s.dx,s.dy)===1).slice(-4);
    assert(raw.every(s=>s.to[0]===s.from[0]&&s.to[1]===s.from[1]),'one count measured as no travel');
