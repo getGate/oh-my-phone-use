@@ -13,7 +13,7 @@ overview; each component has its own README and `AGENTS.md`.
 
 | Path | Language / tool | Hardware-free tests (run from the repo root) |
 | --- | --- | --- |
-| `firmware/` | C11, ESP-IDF v6.1, target `esp32` only | `make -C firmware/test/host test` |
+| `firmware/` | C11, ESP-IDF v6.1, target `esp32` (`esp32s3` for screen control) | `make -C firmware/test/host test` |
 | `host/control_server/` | Node.js 20+, CommonJS, `node --test`, one dependency (`ws`) | `npm test --prefix host/control_server` |
 | `host/tools/` | Python 3, stdlib + `pyserial`, `unittest` | `.venv/bin/python -m unittest discover -s host/test/phone` |
 | `ios/` | Swift / SwiftUI, Xcode project `OhMyPhoneUse.xcodeproj` | `bash ios/scripts/test_relay.sh`, `test_frames.sh`, `test_setup.sh`, `test_session_launch.sh`, `test_calibration_click.sh` |

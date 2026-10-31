@@ -2,8 +2,15 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "sdkconfig.h"
+#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
+/* Boards without a USB-UART bridge (XIAO ESP32S3, ...) use the chip's own USB Serial/JTAG port. */
+#include "driver/usb_serial_jtag.h"
+#include "driver/usb_serial_jtag_vfs.h"
+#else
 #include "driver/uart.h"
 #include "driver/uart_vfs.h"
+#endif
 #include "esp_check.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -16,8 +23,16 @@
 
 static const char *TAG = "console";
 
+#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
+/* Short write timeout: with no host reading the port the ring fills and output is dropped. */
+#define CONSOLE_WRITE(buf, n)       usb_serial_jtag_write_bytes((buf), (n), pdMS_TO_TICKS(50))
+#define CONSOLE_READ(buf, n, ticks) usb_serial_jtag_read_bytes((buf), (n), (ticks))
+#else
 #define CONSOLE_UART        UART_NUM_0
 #define CONSOLE_BAUD        CONFIG_ESP_CONSOLE_UART_BAUDRATE
+#define CONSOLE_WRITE(buf, n)       uart_write_bytes(CONSOLE_UART, (buf), (n))
+#define CONSOLE_READ(buf, n, ticks) uart_read_bytes(CONSOLE_UART, (buf), (n), (ticks))
+#endif
 #define CONSOLE_RX_BUF      2048
 #define CONSOLE_TX_BUF      4096
 #define CONSOLE_TASK_STACK  5120
@@ -46,25 +61,25 @@ static int console_log_vprintf(const char *fmt, va_list ap)
         for (size_t i = 0; i < len; i++) {
             line[fill++] = chunk[i];
             if (chunk[i] == '\n' || fill == sizeof(line)) {
-                uart_write_bytes(CONSOLE_UART, line, fill);
+                CONSOLE_WRITE(line, fill);
                 fill = 0;
             }
         }
         xSemaphoreGive(s_log_lock);
     } else {
-        uart_write_bytes(CONSOLE_UART, chunk, len);
+        CONSOLE_WRITE(chunk, len);
     }
     return n;
 }
 
 void serial_console_write_line(const char *line)
 {
-    /* One driver call per line: uart_write_bytes() is atomic, so lines of other tasks cannot split it. */
+    /* One driver call per line: the driver write is atomic, so lines of other tasks cannot split it. */
     char out[COMMAND_RESPONSE_MAX + 1];
     size_t n = strnlen(line, COMMAND_RESPONSE_MAX);
     memcpy(out, line, n);
     out[n++] = '\n';
-    uart_write_bytes(CONSOLE_UART, out, n);
+    CONSOLE_WRITE(out, n);
 }
 
 static void handle_line(const char *line)
@@ -75,7 +90,7 @@ static void handle_line(const char *line)
         return;
     }
     response[n++] = '\n';
-    uart_write_bytes(CONSOLE_UART, response, n);
+    CONSOLE_WRITE(response, n);
 }
 
 static void console_task(void *arg)
@@ -86,12 +101,12 @@ static void console_task(void *arg)
     uint8_t rx[64];
 
     for (;;) {
-        int n = uart_read_bytes(CONSOLE_UART, rx, sizeof(rx), pdMS_TO_TICKS(100));
+        int n = CONSOLE_READ(rx, sizeof(rx), pdMS_TO_TICKS(100));
         for (int i = 0; i < n; i++) {
             char c = (char)rx[i];
             if (c == '\n') {
                 if (overflow) {
-                    uart_write_bytes(CONSOLE_UART, "ERR line_too_long\n", 18);
+                    CONSOLE_WRITE("ERR line_too_long\n", 18);
                     overflow = false;
                 } else {
                     line[fill] = '\0';
@@ -109,6 +124,14 @@ static void console_task(void *arg)
 
 esp_err_t serial_console_start(void)
 {
+#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
+    usb_serial_jtag_driver_config_t cfg = {
+        .rx_buffer_size = CONSOLE_RX_BUF,
+        .tx_buffer_size = CONSOLE_TX_BUF,
+    };
+    ESP_RETURN_ON_ERROR(usb_serial_jtag_driver_install(&cfg), TAG, "usb serial jtag driver");
+    usb_serial_jtag_vfs_use_driver();
+#else
     const uart_config_t cfg = {
         .baud_rate = CONSOLE_BAUD,
         .data_bits = UART_DATA_8_BITS,
@@ -125,6 +148,7 @@ esp_err_t serial_console_start(void)
 
     /* stdout/stdin now go through the driver too (no direct FIFO writes racing the driver). */
     uart_vfs_dev_use_driver(CONSOLE_UART);
+#endif
 
     s_log_lock = xSemaphoreCreateMutex();
     ESP_RETURN_ON_FALSE(s_log_lock != NULL, ESP_ERR_NO_MEM, TAG, "mutex");
@@ -133,6 +157,10 @@ esp_err_t serial_console_start(void)
     BaseType_t ok = xTaskCreate(console_task, "console", CONSOLE_TASK_STACK, NULL, CONSOLE_TASK_PRIO, NULL);
     ESP_RETURN_ON_FALSE(ok == pdPASS, ESP_ERR_NO_MEM, TAG, "task");
 
+#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
+    ESP_LOGI(TAG, "serial command console on USB Serial/JTAG");
+#else
     ESP_LOGI(TAG, "serial command console on UART%d at %d baud", CONSOLE_UART, CONSOLE_BAUD);
+#endif
     return ESP_OK;
 }

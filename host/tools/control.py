@@ -39,6 +39,7 @@ DEFAULT_BAUD = 115200               # the HFP call audio test build (sdkconfig.h
 DEFAULT_TIMEOUT = 5.0
 RESPONSE_WORDS = ("OK", "ERR", "PONG", "STATUS", "WIFI", "SECRET", "CALL", "AUDIO")
 CP210X_VID = 0x10C4
+ESPRESSIF_VID = 0x303A              # built-in USB Serial/JTAG (XIAO ESP32S3 and other S3/C3 boards)
 COMMANDS = ("move", "click", "down", "up", "scroll", "type", "key", "keydown", "keyup",
             "ping", "status", "unpair", "wifi", "secret", "call", "dial", "answer", "hangup", "audio",
             "raw", "repl")
@@ -54,7 +55,7 @@ def find_port():
         if sys.platform == "darwin" and device.startswith("/dev/tty."):
             device = device.replace("/dev/tty.", "/dev/cu.", 1)
         looks_like_esp = (
-            info.vid == CP210X_VID
+            info.vid in (CP210X_VID, ESPRESSIF_VID)
             or "CP210" in (info.description or "")
             or "usbserial" in device
             or "SLAB_USBtoUART" in device
@@ -64,7 +65,7 @@ def find_port():
     if len(candidates) == 1:
         return candidates.pop()
     if not candidates:
-        raise LookupError("no ESP32 serial port found; pass -p /dev/cu.usbserial-XXXX (see: ls /dev/cu.*)")
+        raise LookupError("no ESP32 serial port found; pass -p /dev/cu.usbserial-XXXX or /dev/cu.usbmodemXXXX (see: ls /dev/cu.*)")
     raise LookupError("several candidate ports, pass -p to pick one:\n  " + "\n  ".join(sorted(candidates)))
 
 

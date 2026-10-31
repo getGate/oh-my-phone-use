@@ -28,7 +28,7 @@ tools live in `host/tools/`.
 
 | Item | Version / notes |
 | --- | --- |
-| Board | Espressif ESP32-PICO-KIT-1 (ESP32-PICO-V3, classic ESP32, CP2102N USB-UART). ESP32-PICO-KIT V4 (PICO-D4) has not been validated. Target `esp32` only; S3/C3 are not supported. |
+| Board | Espressif ESP32-PICO-KIT-1 (ESP32-PICO-V3, classic ESP32, CP2102N USB-UART). ESP32-PICO-KIT V4 (PICO-D4) has not been validated. Also: Seeed Studio XIAO ESP32S3 (target `esp32s3`, screen control only, see [ESP32-S3 boards](#esp32-s3-boards)). C3 and other targets are not supported. |
 | ESP-IDF | **v6.1** (the version used to build this project); other versions have not been validated. The `espressif/mdns` component is fetched by the component manager on the first build (needs internet once). |
 | Python for ESP-IDF | 3.10 or newer (ESP-IDF v6.1 requirement) |
 | Host tools | macOS, Python 3 with `pyserial` (use the repository-root `.venv/`; see [Quick start](../README.md#quick-start-with-your-agent)). Use Python 3.10+ for a shared host/ESP-IDF setup. The call speech path requires macOS `say`; the complete setup has not been validated on Linux or Windows. |
@@ -62,7 +62,22 @@ idf.py -C firmware -p /dev/cu.usbserial-XXXXX -b 230400 flash monitor
 
 Exit the monitor with `Ctrl-]`. Close the monitor before using `host/tools/control.py`: the monitor
 holds the port exclusively. Rates above 230400 baud produced serial corruption through a USB
-hub with this board, hence `-b 230400`. Targets other than `esp32` are not supported.
+hub with this board, hence `-b 230400`. Targets other than `esp32` and `esp32s3` are not supported.
+
+### ESP32-S3 boards
+
+The default (screen control) build also runs on the Seeed Studio XIAO ESP32S3:
+
+```bash
+idf.py -C firmware set-target esp32s3
+idf.py -C firmware -p /dev/cu.usbmodemXXXXX build flash
+```
+
+`sdkconfig.defaults.esp32s3` is merged automatically for that target: the serial protocol runs on
+the chip's own USB Serial/JTAG port (`/dev/cu.usbmodem*`, no USB-UART bridge) and the flash is
+8 MB. BOOT is GPIO0 as on the PICO-KIT. The ESP32-S3 has no Classic Bluetooth, so the HFP builds
+(phone calls) do not apply. Attach the board's external antenna; without it Bluetooth and Wi-Fi
+range is much shorter. Tested with an iPad Pro (11-inch, 3rd generation) on iPadOS 26.6.1.
 
 The partition table is `partitions.csv` (3 MB app, no OTA): Bluedroid + Wi-Fi + lwIP + HTTP
 server are ~1.3 MB, more than the 1.5 MB "single app, large" layout leaves free with -Og. The
@@ -77,7 +92,8 @@ ls /dev/cu.*
 
 With macOS's built-in CP210x driver the board shows up as `/dev/cu.usbserial-XXXXX`
 (with the Silicon Labs VCP driver it is `/dev/cu.SLAB_USBtoUART`). Always use the `cu.` name,
-not `tty.`. `host/tools/control.py` auto-detects the port when exactly one CP210x bridge is attached;
+not `tty.`. ESP32-S3 boards show up as `/dev/cu.usbmodemXXXXX`. `host/tools/control.py` auto-detects
+the port when exactly one CP210x bridge or Espressif USB Serial/JTAG port is attached;
 otherwise pass `-p PORT` or set `PHONEUSE_PORT=/dev/cu.usbserial-XXXXX`.
 
 ## Pair the ESP32 with an iPhone
