@@ -81,11 +81,13 @@ the current board, as described in [Status](#status).
 2. **Control server and MCP server** (the first start creates the input-device secret):
 
    ```bash
-   npm ci --prefix host/control_server
-   npm run start:background --prefix host/control_server
-   npm run calibration:background --prefix host/control_server
-   npm run mcp:background --prefix host/control_server        # http://127.0.0.1:8780/mcp
+   make setup        # npm ci for the control server, .venv with the Python tools
+   make up           # control server, calibration service, MCP server (http://127.0.0.1:8780/mcp)
    ```
+
+   `make down` stops them and `make status` shows the phone session and the board link. Put
+   personal settings in `local.mk` (not committed), for example `PORT = 8775` when 8765 is taken;
+   the [Makefile](Makefile) lists them.
 
 3. **Provision the board** with that secret and the Wi-Fi network the phone uses; the script
    prints the board's address (`phoneuse.local` or an IP):
